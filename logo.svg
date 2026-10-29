@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 140" role="img" aria-label="P3">
+  <rect width="330" height="140" rx="14" fill="#0d1016"/>
+  <!-- P1, block letters, crossed out -->
+  <path fill="#eef1f6" fill-rule="evenodd" d="M12 22 H64 A30 30 0 0 1 64 82 H40 V120 H12 Z M40 40 H60 A12 12 0 0 1 60 64 H40 Z"/>
+  <path fill="#eef1f6" d="M92 22 H118 V120 H92 V48 H82 V32 Z"/>
+  <path d="M6 128 Q62 74 128 10" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
+  <!-- marker 2, crossed out -->
+  <path d="M152 52 C150 24 198 18 200 46 C202 72 162 92 150 118 C172 112 192 114 210 118" fill="none" stroke="#eef1f6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M142 124 Q180 76 218 22" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
+  <!-- marker 3, the one that counts -->
+  <path d="M240 32 C262 10 308 16 304 46 C302 64 280 70 266 70 C290 70 314 80 310 104 C306 134 256 136 238 114" fill="none" stroke="#ffd23f" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -239,7 +239,7 @@ function tower(p) {
       }
     }
     const tot = sc ? `<div class="total"><span class="label">Race total</span><b>${sc.total}</b></div>` : "";
-    body = `<div class="tbody"><p class="label">Top 5 finish</p><div class="grid5">${rows}</div><p class="label">The rest of the P3 game</p><div class="grid5">${ex}${scRow}${tx}</div>${act}${tot}</div>`;
+    body = `<div class="tbody"><p class="label">Abu Dhabi top 5</p><div class="grid5">${rows}</div><p class="label">The rest of the P3 game</p><div class="grid5">${ex}${scRow}${tx}</div>${act}${tot}</div>`;
   }
   return `<article class="tower ${p}"><div class="thead"><h3>${PNAME[p]}</h3><span class="chip">${esc(status)}</span></div>${body}</article>`;
 }
@@ -248,7 +248,7 @@ function resultsPanel() {
   const res = getRes(raceId), isOpen = started(raceId), ed = canWrite() && !res.final && isOpen;
   const used = new Set(res.top5.filter(Boolean));
   const head = res.final ? finalBanner(res)
-    : `<h3>Race results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
+    : `<h3>Abu Dhabi results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
   const sel = (id, f, v, label, allowNone) => ed ? `<select id="${id}" data-r="${f}" aria-label="Actual ${label}">${driverOpts(v, f.startsWith("top5") ? used : null, allowNone)}</select>` : chip(v);
   const top = res.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${sel("rs-t" + i, "top5." + i, d, "P" + (i + 1))}<span></span></div>`).join("");
   const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${sel("rs-" + f, f, res[f], l, f === "firstOut")}<span></span></div>`).join("")
@@ -288,12 +288,18 @@ function statusLine() {
   const [cls, label] = map[conn] || map.connecting;
   return `<span class="dot ${cls}"></span>${label}`;
 }
-function clockText() {
+function clockParts() {
   const ms = startMs(raceId) - Date.now();
-  if (getRes(raceId).final) return "Race scored";
-  if (ms <= 0) return Date.now() - startMs(raceId) < 2.5 * 3600e3 ? "Race underway · picks locked" : "Chequered flag · enter results";
+  if (getRes(raceId).final) return ["Abu Dhabi", "Race scored"];
+  if (ms <= 0) return Date.now() - startMs(raceId) < 2.5 * 3600e3 ? ["Picks locked", "Race underway"] : ["Chequered flag", "Enter results"];
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
-  return `Lights out in ${d ? d + "d " : ""}${h}h ${String(m).padStart(2, "0")}m`;
+  return ["Lights out in", `${d ? d + "d " : ""}${h}h ${String(m).padStart(2, "0")}m`];
+}
+function paintClock() {
+  const [label, value] = clockParts();
+  const l = $("clockLabel"), c = $("clock");
+  if (l) l.textContent = label;
+  if (c) c.textContent = value;
 }
 function render() {
   if (conn === "nocode") return;
@@ -304,7 +310,9 @@ function render() {
   document.querySelectorAll("#whoSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.who === who)));
   const r = raceById(raceId);
   const when = new Date(r.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  $("raceStrip").innerHTML = `<div><h2>${esc(r.name)}<em>R${r.round}</em></h2><div class="meta">${esc(r.circuit)} · lights out ${esc(when)}</div></div><div><div class="clock" id="clock">${clockText()}</div><div class="status" id="status">${statusLine()}</div></div>`;
+  $("heroWhen").textContent = `${when} your time`;
+  paintClock();
+  $("status").innerHTML = statusLine();
   const res = getRes(raceId);
   const tf = res.final ? score(getPick(raceId, "fayez"), res).total : 0;
   const tl = res.final ? score(getPick(raceId, "leona"), res).total : 0;
@@ -358,7 +366,7 @@ document.addEventListener("click", e => {
 setInterval(() => {
   if (conn === "nocode") return;
   if (started(raceId) !== startedFlag) { render(); return; }
-  const c = $("clock"); if (c) c.textContent = clockText();
+  paintClock();
 }, 30000);
 
 /* ---------- start ---------- */

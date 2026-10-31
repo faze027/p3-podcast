@@ -204,12 +204,31 @@ function driverOpts(val, used, allowNone) {
   }
   return h;
 }
-function chip(code) {
-  if (!code) return `<div class="empty">No pick</div>`;
-  if (code === "NONE") return `<div class="txt">No retirements</div>`;
+/* Driver photos live in drivers/<code>.webp (e.g. drivers/ver.webp). A missing photo is skipped quietly,
+   so adding one later (say drivers/lin.webp) needs no code change. */
+const NO_PHOTO = new Set();
+document.addEventListener("error", e => {
+  const img = e.target;
+  if (!img || img.tagName !== "IMG" || !img.classList.contains("face")) return;
+  NO_PHOTO.add(img.dataset.code);
+  const card = img.closest(".drv");
+  if (card) card.classList.add("noface");
+  img.remove();
+}, true);
+
+function card(code, editing) {
+  const hide = editing ? ' aria-hidden="true"' : "";
+  if (code === "NONE") return `<div class="drv none"${hide}><span class="who"><span class="nm">No retirements</span><span class="tm">Everyone finishes</span></span></div>`;
   const d = DMAP[code];
-  if (!d) return `<div class="empty">No pick</div>`;
-  return `<div class="drv" style="--team:${TEAMS[d.team].c}"><b>${d.code}</b><span>${esc(d.name)}</span></div>`;
+  if (!d) return `<div class="drv blank"${hide}><span class="who"><span class="nm">${editing ? "Pick a driver" : "No pick"}</span></span></div>`;
+  const t = TEAMS[d.team], c = d.code.toLowerCase();
+  const face = NO_PHOTO.has(c) ? "" : `<img class="face" src="drivers/${c}.webp" data-code="${c}" alt="" loading="lazy" decoding="async">`;
+  return `<div class="drv${face ? "" : " noface"}" style="--team:${t.c}"${hide}><b>${d.code}</b><span class="who"><span class="nm">${esc(d.name)}</span><span class="tm">${esc(t.n)}</span></span>${face}</div>`;
+}
+/* Editable: the card is what you see; the native dropdown sits invisibly on top of it. */
+function driverField(id, dataAttr, value, used, allowNone, label, editing) {
+  if (!editing) return card(value, false);
+  return `<div class="pick">${card(value, true)}<select id="${id}" ${dataAttr} aria-label="${esc(label)}">${driverOpts(value, used, allowNone)}</select></div>`;
 }
 const ptCell = s => s ? `<span class="pt ${s.k}">${s.v ? "+" + s.v : "0"}</span>` : `<span></span>`;
 const PLACEHOLDER = { surprise: "Who over-delivers?", flop: "Who disappoints?", crazy: "Both Ferraris DNF…" };
@@ -224,8 +243,8 @@ function tower(p) {
     body = `<div class="sealed"><b>Sealed</b><p>${pickCount(pick)} of ${TOTAL_SLOTS} picks made${pick.locked ? ", locked in" : ""}. Revealed when you both lock in, or at lights out.</p></div>`;
   } else {
     const used = new Set(pick.top5.filter(Boolean));
-    const rows = pick.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${ed ? `<select id="pk-${p}-t${i}" data-f="top5.${i}" aria-label="Your P${i + 1}">${driverOpts(d, used)}</select>` : chip(d)}${ptCell(sc && sc.top5[i])}</div>`).join("");
-    const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${ed ? `<select id="pk-${p}-${f}" data-f="${f}" aria-label="${l}">${driverOpts(pick[f], null, f === "firstOut")}</select>` : chip(pick[f])}${ptCell(sc && sc[f])}</div>`).join("");
+    const rows = pick.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${driverField(`pk-${p}-t${i}`, `data-f="top5.${i}"`, d, used, false, `Your P${i + 1}`, ed)}${ptCell(sc && sc.top5[i])}</div>`).join("");
+    const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${driverField(`pk-${p}-${f}`, `data-f="${f}"`, pick[f], null, f === "firstOut", l, ed)}${ptCell(sc && sc[f])}</div>`).join("");
     const scRow = `<div class="row x"><span class="xl">Safety cars</span><div class="scseg" role="group" aria-label="Safety cars">${SC_OPTS.map(o => `<button type="button" data-sc="${o}" aria-pressed="${pick.sc === o}"${ed ? "" : " disabled"}>${o}</button>`).join("")}</div>${ptCell(sc && sc.sc)}</div>`;
     const tx = TEXTS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${ed ? `<input type="text" id="pk-${p}-${f}" data-f="${f}" maxlength="${TEXT_MAX}" autocomplete="off" placeholder="${PLACEHOLDER[f]}" value="${esc(pick[f])}">` : pick[f] ? `<div class="txt">${esc(pick[f])}</div>` : `<div class="empty">No pick</div>`}${ptCell(sc && sc[f])}</div>`).join("");
     let act = "";
@@ -249,7 +268,7 @@ function resultsPanel() {
   const used = new Set(res.top5.filter(Boolean));
   const head = res.final ? finalBanner(res)
     : `<h3>Abu Dhabi results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
-  const sel = (id, f, v, label, allowNone) => ed ? `<select id="${id}" data-r="${f}" aria-label="Actual ${label}">${driverOpts(v, f.startsWith("top5") ? used : null, allowNone)}</select>` : chip(v);
+  const sel = (id, f, v, label, allowNone) => driverField(id, `data-r="${f}"`, v, f.startsWith("top5") ? used : null, allowNone, `Actual ${label}`, ed);
   const top = res.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${sel("rs-t" + i, "top5." + i, d, "P" + (i + 1))}<span></span></div>`).join("");
   const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${sel("rs-" + f, f, res[f], l, f === "firstOut")}<span></span></div>`).join("")
     + `<div class="row x"><span class="xl">Safety cars</span><div class="scseg" role="group" aria-label="Actual safety cars">${SC_OPTS.map(o => `<button type="button" data-rsc="${o}" aria-pressed="${res.sc === o}"${ed ? "" : " disabled"}>${o}</button>`).join("")}</div><span></span></div>`;

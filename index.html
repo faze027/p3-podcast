@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;800&family=Titillium+Web:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: broadcast timing-tower. Masthead with race tabs, then two player towers side by side (stacked on phones), results, season. */
+/* Layout: broadcast timing-tower for one race. Race strip and scoreboard, then two player towers side by side (stacked on phones), results, scoring. */
 :root{
   --asphalt:#0d1016; --panel:#151a23; --panel-2:#1c2230; --line:#283143;
   --text:#eef1f6; --muted:#8c96a8;
@@ -45,13 +45,6 @@ button,select,input{font:inherit;color:inherit}
 .seg button{border:0;background:none;padding:6px 14px;border-radius:999px;cursor:pointer;font-weight:700;color:var(--muted)}
 .seg button[aria-pressed="true"].f{background:var(--fayez);color:var(--asphalt)}
 .seg button[aria-pressed="true"].l{background:var(--leona);color:var(--asphalt)}
-.tabs{grid-column:1/-1;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column}
-.tab b{font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
-.tab i{font-style:normal;font-size:12px;color:var(--muted);font-family:var(--mono)}
-.tab[aria-current="true"]{border-color:var(--flag);background:var(--panel-2)}
-.tab[aria-current="true"] b{color:var(--flag)}
-.tab .done{color:var(--good)}
 
 /* Race strip */
 .race{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:baseline;justify-content:space-between;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
@@ -135,15 +128,8 @@ select:disabled,input:disabled{opacity:.6}
 .banner{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1;text-wrap:balance;margin:0}
 .banner .f{color:var(--fayez)} .banner .l{color:var(--leona)}
 
-/* Season + rules */
-.two{display:grid;grid-template-columns:3fr 2fr;gap:18px}
-.tablewrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
-th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
-td.n{font-family:var(--mono);text-align:right} th.n{text-align:right}
-td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight:700}
-.rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+/* Scoring rules */
+.rules{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 32px}
 .rules li{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:5px}
 .rules li b{font-family:var(--mono);color:var(--flag);white-space:nowrap}
 .notice{background:var(--panel-2);border-left:4px solid var(--flag);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px}
@@ -157,7 +143,7 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
 @media (max-width:760px){
   .mast{grid-template-columns:1fr}
   .who{justify-content:flex-start}
-  .towers,.rgrid,.judge,.two{grid-template-columns:1fr}
+  .towers,.rgrid,.judge,.rules{grid-template-columns:1fr}
   .brand h1{font-size:36px}
   .logo{height:48px}
   .stand{grid-template-columns:1fr 1fr}
@@ -192,7 +178,6 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
         <button type="button" class="l" data-who="leona" aria-pressed="false">Leona</button>
       </div>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Races"></nav>
   </header>
 
   <section class="gate" id="gate" hidden>
@@ -204,26 +189,23 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
     <div class="wrap">
       <section class="race" id="raceStrip"></section>
       <div class="notice" id="notice" role="status" hidden></div>
-      <section class="stand" id="standings" aria-label="Season standings"></section>
+      <section class="stand" id="standings" aria-label="Scoreboard"></section>
       <section class="towers" id="towers"></section>
       <section class="panel" id="results"></section>
-      <section class="two">
-        <div class="panel" id="season"></div>
-        <div class="panel">
-          <h3>Scoring</h3>
-          <ul class="rules">
-            <li>Top 5, exact position <b>5 each</b></li>
-            <li>Top 5, right driver, wrong spot <b>2 each</b></li>
-            <li>Pole position <b>4</b></li>
-            <li>First retirement <b>4</b></li>
-            <li>Fastest lap <b>3</b></li>
-            <li>Driver of the Day <b>3</b></li>
-            <li>Safety cars, exact count <b>3</b></li>
-            <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
-            <li>Crazy prediction, if it happened <b>6</b></li>
-          </ul>
-          <p class="hint">Picks stay sealed until you both lock in, or until lights out. They lock for good at lights out. Results open at lights out.</p>
-        </div>
+      <section class="panel">
+        <h3>Scoring</h3>
+        <ul class="rules">
+          <li>Top 5, exact position <b>5 each</b></li>
+          <li>Top 5, right driver, wrong spot <b>2 each</b></li>
+          <li>Pole position <b>4</b></li>
+          <li>First retirement <b>4</b></li>
+          <li>Fastest lap <b>3</b></li>
+          <li>Driver of the Day <b>3</b></li>
+          <li>Safety cars, exact count <b>3</b></li>
+          <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
+          <li>Crazy prediction, if it happened <b>6</b></li>
+        </ul>
+        <p class="hint">Picks stay sealed until you both lock in, or until lights out. They lock for good at lights out. Results open at lights out.</p>
       </section>
     </div>
   </div>
@@ -232,6 +214,6 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
 <script src="firebase-app-compat.js"></script>
 <script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

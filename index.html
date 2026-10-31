@@ -112,9 +112,26 @@ button,select,input{font:inherit;color:inherit}
 .pt.hit{color:var(--good)} .pt.half{color:var(--flag)}
 select,input[type=text]{width:100%;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 10px;color:var(--text)}
 select:disabled,input:disabled{opacity:.6}
-.drv{display:flex;align-items:baseline;gap:8px;border-left:5px solid var(--team,var(--muted));background:var(--panel-2);padding:7px 10px;border-radius:0 5px 5px 0;min-width:0}
-.drv b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.06em;line-height:1}
-.drv span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Driver card: team colour, code, name, team name, face */
+.drv{--team:var(--muted);position:relative;display:flex;align-items:center;gap:10px;min-width:0;min-height:52px;
+  padding:6px 66px 6px 12px;border-left:5px solid var(--team);border-radius:0 6px 6px 0;overflow:hidden;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--team) 22%,var(--panel-2)) 0%,var(--panel-2) 72%)}
+.drv b{flex:none;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.06em;line-height:1}
+.drv .who{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.drv .nm{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drv .tm{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--team) 60%,var(--text))}
+.drv .face{position:absolute;right:14px;bottom:0;width:52px;height:52px;object-fit:cover;pointer-events:none}
+.drv.noface{padding-right:14px}
+.drv.blank{border-left-color:var(--line);background:var(--panel-2);padding-right:14px}
+.drv.blank .nm{color:var(--muted);font-style:italic}
+.drv.none{padding-right:14px}
+/* Tap a card to change it: the real dropdown sits invisibly on top, so phones still get their native picker */
+.pick{position:relative;min-width:0;border-radius:0 6px 6px 0}
+.pick select{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer;font-size:16px}
+.pick:focus-within{outline:2px solid var(--flag);outline-offset:2px}
+.pick:hover .drv{filter:brightness(1.12)}
+.pick::after{content:"";position:absolute;right:7px;top:50%;width:7px;height:7px;margin-top:-6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);pointer-events:none}
+.pick .drv.noface,.pick .drv.blank,.pick .drv.none{padding-right:26px}
 .empty{color:var(--muted);font-style:italic;font-size:14px;padding:7px 10px}
 .txt{background:var(--panel-2);padding:7px 10px;border-radius:5px;overflow-wrap:anywhere}
 .scseg{display:flex;gap:4px}
@@ -180,7 +197,11 @@ select:disabled,input:disabled{opacity:.6}
   .sbar.l{align-items:flex-end}
   .sbar .nm{font-size:22px}
   .sbar .pts{font-size:22px;white-space:nowrap}
-  .row.x{grid-template-columns:100px minmax(0,1fr) 40px}
+  .row{grid-template-columns:40px minmax(0,1fr) 36px}
+  .row.x{grid-template-columns:minmax(0,1fr) 36px;grid-template-areas:"lab lab" "val pts";row-gap:4px;padding-top:2px}
+  .row.x > :nth-child(1){grid-area:lab}
+  .row.x > :nth-child(2){grid-area:val}
+  .row.x > :nth-child(3){grid-area:pts}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -271,6 +292,6 @@ select:disabled,input:disabled{opacity:.6}
 <script src="firebase-app-compat.js"></script>
 <script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

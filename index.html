@@ -5,19 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.google.com; connect-src 'self' https://firestore.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#0d1016">
-<title>P3 Podcast</title>
+<meta name="theme-color" content="#120e2a">
+<title>P3 Podcast · Abu Dhabi GP</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;800&family=Titillium+Web:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: broadcast timing-tower for one race. Race strip and scoreboard, then two player towers side by side (stacked on phones), results, scoring. */
+/* Layout: broadcast timing-tower for one race. Abu Dhabi race header (twilight sky over Yas Marina, gridshell lattice like the
+   Yas Hotel canopy, UAE flag), scoreboard, two player towers side by side (stacked on phones), results, scoring. */
 :root{
   --asphalt:#0d1016; --panel:#151a23; --panel-2:#1c2230; --line:#283143;
   --text:#eef1f6; --muted:#8c96a8;
   --fayez:#ff8a1f; --leona:#1fd1c1; --flag:#ffd23f;
   --good:#3ddc8c; --bad:#ff5d62;
+  --dusk-1:#120e2a; --dusk-2:#26163f; --dusk-3:#4d1f3c; --horizon:#e0782e; --sun:#ffb35c;
+  --dusk-text:#ddd6ee; --dusk-muted:#a79dc4; --dusk-line:rgba(255,255,255,.12);
+  --uae-red:#ef3340; --uae-green:#00843d; --uae-white:#ffffff; --uae-black:#000000;
   --display:"Saira Extra Condensed","Arial Narrow",Impact,sans-serif;
   --body:"Titillium Web","Segoe UI",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
@@ -36,8 +40,8 @@ button,select,input{font:inherit;color:inherit}
 /* Masthead */
 .mast{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:end}
 .brand{display:flex;align-items:center;gap:14px}
-.logo{height:58px;width:auto;display:block;flex:none}
-.brand h1{margin:0;font-family:var(--display);font-weight:800;font-size:44px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
+.logo{height:46px;width:auto;display:block;flex:none}
+.brand h1{margin:0;font-family:var(--display);font-weight:800;font-size:34px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
 .brand small{display:block;font-family:var(--body);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .who{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .who span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -46,13 +50,34 @@ button,select,input{font:inherit;color:inherit}
 .seg button[aria-pressed="true"].f{background:var(--fayez);color:var(--asphalt)}
 .seg button[aria-pressed="true"].l{background:var(--leona);color:var(--asphalt)}
 
-/* Race strip */
-.race{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:baseline;justify-content:space-between;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
-.race h2{margin:0;font-family:var(--display);font-weight:800;font-size:34px;text-transform:uppercase;letter-spacing:.02em;line-height:1;text-wrap:balance}
-.race h2 em{font-style:normal;color:var(--muted);font-size:18px;margin-left:8px;font-family:var(--mono);font-weight:500}
-.race .meta{color:var(--muted);font-size:13px}
-.clock{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--flag);font-variant-numeric:tabular-nums}
-.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+/* Abu Dhabi race header */
+.hero{position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--dusk-line);color:var(--text);
+  background:
+    radial-gradient(140% 70% at 72% 118%, color-mix(in srgb,var(--horizon) 62%,transparent) 0%, color-mix(in srgb,var(--horizon) 18%,transparent) 38%, transparent 62%),
+    linear-gradient(180deg,var(--dusk-1) 0%,var(--dusk-2) 62%,var(--dusk-3) 100%)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(60deg,var(--dusk-line) 0 1px,transparent 1px 28px),
+    repeating-linear-gradient(-60deg,var(--dusk-line) 0 1px,transparent 1px 28px);
+  opacity:.5;
+  -webkit-mask-image:linear-gradient(100deg,transparent 38%,#000 78%);mask-image:linear-gradient(100deg,transparent 38%,#000 78%)}
+.hero-in{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px 40px;align-items:end;padding:26px 28px 24px}
+.kicker{margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--sun)}
+.uae{width:36px;height:18px;flex:none;display:block;border-radius:2px;box-shadow:0 0 0 1px var(--dusk-line)}
+.uae .g{fill:var(--uae-green)} .uae .w{fill:var(--uae-white)} .uae .k{fill:var(--uae-black)} .uae .r{fill:var(--uae-red)}
+.gp{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(50px,8.4vw,92px);line-height:.86;letter-spacing:.01em;text-transform:uppercase}
+.gp span{display:block}
+.gp span + span{color:var(--sun)}
+.venue{margin:14px 0 0;font-size:15px;color:var(--dusk-text)}
+.facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin:16px 0 0;padding:0;list-style:none}
+.facts li{display:flex;flex-direction:column;gap:2px}
+.facts b{font-family:var(--mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.facts small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dusk-muted);font-weight:700}
+.hero-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+.hero-side .label{color:var(--dusk-muted)}
+.clock{font-family:var(--mono);font-weight:600;font-size:clamp(30px,4.4vw,46px);line-height:1;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.yourtime{margin:4px 0 6px;font-size:13px;color:var(--dusk-text)}
+.status{font-size:12px;color:var(--dusk-muted);display:flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.live{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
 .dot.warn{background:var(--flag)}
@@ -144,8 +169,11 @@ select:disabled,input:disabled{opacity:.6}
   .mast{grid-template-columns:1fr}
   .who{justify-content:flex-start}
   .towers,.rgrid,.judge,.rules{grid-template-columns:1fr}
-  .brand h1{font-size:36px}
-  .logo{height:48px}
+  .brand h1{font-size:30px}
+  .logo{height:40px}
+  .hero-in{grid-template-columns:1fr;padding:22px 18px 20px}
+  .hero-side{align-items:flex-start;text-align:left;border-top:1px solid var(--dusk-line);padding-top:16px}
+  .facts{gap:10px 20px}
   .stand{grid-template-columns:1fr 1fr}
   .vs{display:none}
   .sbar,.sbar.l{flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px}
@@ -169,7 +197,7 @@ select:disabled,input:disabled{opacity:.6}
         <path d="M142 124 Q180 76 218 22" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
         <path d="M240 32 C262 10 308 16 304 46 C302 64 280 70 266 70 C290 70 314 80 310 104 C306 134 256 136 238 114" fill="none" stroke="#ffd23f" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <div><h1>Podcast</h1><small>Fayez vs Leona · prediction paddock</small></div>
+      <div><h1>Podcast</h1><small>Fayez vs Leona · Abu Dhabi GP predictions</small></div>
     </div>
     <div class="who" id="whoBox">
       <span>This device is</span>
@@ -182,12 +210,41 @@ select:disabled,input:disabled{opacity:.6}
 
   <section class="gate" id="gate" hidden>
     <h2>Private game</h2>
-    <p>This board only opens from the private link. Ask Fayez to send it to you, then open that exact link.</p>
+    <p>This Abu Dhabi GP board only opens from the private link. Ask Fayez to send it to you, then open that exact link.</p>
   </section>
 
   <div id="game">
     <div class="wrap">
-      <section class="race" id="raceStrip"></section>
+      <section class="hero" id="hero" aria-labelledby="gpTitle">
+        <div class="hero-in">
+          <div>
+            <p class="kicker">
+              <svg class="uae" viewBox="0 0 24 12" aria-hidden="true">
+                <rect class="g" x="6" y="0" width="18" height="4"/>
+                <rect class="w" x="6" y="4" width="18" height="4"/>
+                <rect class="k" x="6" y="8" width="18" height="4"/>
+                <rect class="r" x="0" y="0" width="6" height="12"/>
+              </svg>
+              Round 22 of 22 · Season finale
+            </p>
+            <h2 class="gp" id="gpTitle"><span>Abu Dhabi</span> <span>Grand Prix</span></h2>
+            <p class="venue">Yas Marina Circuit · Abu Dhabi, United Arab Emirates</p>
+            <ul class="facts">
+              <li><small>Race day</small><b>Sun 6 Dec</b></li>
+              <li><small>Lights out, Abu Dhabi</small><b>17:00</b></li>
+              <li><small>Laps</small><b>58</b></li>
+              <li><small>Lap length</small><b>5.281 km</b></li>
+              <li><small>Distance</small><b>306.3 km</b></li>
+            </ul>
+          </div>
+          <div class="hero-side">
+            <p class="label" id="clockLabel">Lights out in</p>
+            <div class="clock" id="clock">–</div>
+            <p class="yourtime" id="heroWhen"></p>
+            <div class="status" id="status"><span class="dot"></span>Connecting…</div>
+          </div>
+        </div>
+      </section>
       <div class="notice" id="notice" role="status" hidden></div>
       <section class="stand" id="standings" aria-label="Scoreboard"></section>
       <section class="towers" id="towers"></section>
@@ -214,6 +271,6 @@ select:disabled,input:disabled{opacity:.6}
 <script src="firebase-app-compat.js"></script>
 <script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

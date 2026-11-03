@@ -14,7 +14,7 @@
 <style>
 /* Layout: broadcast timing-tower. Race tabs, then a header for the selected race (its flag, sky and texture: Mexico's
    altitude sun, Interlagos rain, Vegas neon, Lusail floodlights, Yas Marina twilight under the hotel's gridshell),
-   season scoreboard, two player towers side by side (stacked on phones), results, season table and scoring. */
+   season scoreboard, two player towers side by side (stacked on phones), season table and scoring. */
 :root{
   --asphalt:#0d1016; --panel:#151a23; --panel-2:#1c2230; --line:#283143;
   --text:#eef1f6; --muted:#8c96a8;
@@ -58,7 +58,7 @@ button,select,input{font:inherit;color:inherit}
 .tab b{font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
 .tab i{font-style:normal;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
 .tab em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.tab em.next{color:var(--flag)} .tab em.due{color:var(--bad)} .tab em.f{color:var(--fayez)} .tab em.l{color:var(--leona)}
+.tab em.next{color:var(--flag)} .tab em.f{color:var(--fayez)} .tab em.l{color:var(--leona)}
 .tab[aria-current="true"]{border-color:var(--flag);background:var(--panel-2)}
 .tab[aria-current="true"] b{color:var(--flag)}
 .flag{width:36px;height:18px;flex:none;display:block;border-radius:2px;box-shadow:0 0 0 1px var(--dusk-line)}
@@ -173,27 +173,9 @@ select:disabled,input:disabled{opacity:.6}
 .total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:10px}
 .total b{font-family:var(--mono);font-size:24px;font-variant-numeric:tabular-nums}
 
-/* Results */
+/* Season + rules */
 .panel{background:var(--panel);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .panel h3{margin:0;font-family:var(--display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.04em}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.rgrid>div{min-width:0;display:flex;flex-direction:column;gap:6px}
-.judge{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.jcard{background:var(--panel-2);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.jcard.fayez{border-top:3px solid var(--fayez)} .jcard.leona{border-top:3px solid var(--leona)}
-.jrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
-.jrow p{margin:0;font-size:14px;overflow-wrap:anywhere}
-.jrow p small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.yn{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
-.yn button{border:0;background:none;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}
-.yn button[aria-pressed="true"].y{background:var(--good);color:var(--asphalt)}
-.yn button[aria-pressed="true"].no{background:var(--bad);color:var(--asphalt)}
-.yn button:disabled{cursor:default}
-.banner{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1;text-wrap:balance;margin:0}
-.banner .f{color:var(--fayez)} .banner .l{color:var(--leona)}
-.note{margin:0;font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px;max-width:90ch}
-
-/* Season + rules */
 .two{display:grid;grid-template-columns:3fr 2fr;gap:18px}
 .tablewrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
@@ -216,7 +198,7 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
 @media (max-width:760px){
   .mast{grid-template-columns:minmax(0,1fr)}
   .who{justify-content:flex-start}
-  .towers,.rgrid,.judge,.two{grid-template-columns:1fr}
+  .towers,.two{grid-template-columns:1fr}
   .brand h1{font-size:30px}
   .logo{height:40px}
   .hero-in{grid-template-columns:1fr;padding:22px 18px 20px}
@@ -287,7 +269,6 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
       <div class="notice" id="notice" role="status" hidden></div>
       <section class="stand" id="standings" aria-label="Season standings"></section>
       <section class="towers" id="towers"></section>
-      <section class="panel" id="results"></section>
       <section class="two">
         <div class="panel" id="season"></div>
         <div class="panel">
@@ -303,7 +284,7 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
             <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
             <li>Crazy prediction, if it happened <b>6</b></li>
           </ul>
-          <p class="hint">Picks stay sealed until you both lock in, or until lights out. They lock for good at lights out. Results open at lights out. Safety cars count full safety car periods, not virtual ones.</p>
+          <p class="hint">Picks stay sealed until you both lock in, or until lights out, when they lock for good. Each race is scored once its results are in. Safety cars count full safety car periods, not virtual ones.</p>
         </div>
       </section>
     </div>
@@ -313,6 +294,6 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
 <script src="firebase-app-compat.js"></script>
 <script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

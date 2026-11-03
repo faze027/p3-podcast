@@ -1,6 +1,7 @@
 "use strict";
 /* P3 Podcast: F1 predictions for Fayez and Leona, 2026 Mexico City GP to Abu Dhabi GP.
    Data lives in Firestore under games/<game code>/picks and games/<game code>/results.
+   The page saves picks. Results are added outside the page after each race; the page only reads them.
    The game code only comes from the private link (the part after #). It is never stored in this repo. */
 
 /* ---------- season data (keep lights-out times and the driver list in sync with the Firestore rules) ---------- */
@@ -48,7 +49,7 @@ const PTS = { exact: 5, inTop5: 2, pole: 4, firstOut: 4, fastest: 3, dotd: 3, sc
 const SC_OPTS = ["0", "1", "2", "3+"];
 const EXTRAS = [["pole", "Pole position"], ["firstOut", "First retirement"], ["fastest", "Fastest lap"], ["dotd", "Driver of the Day"]];
 const TEXTS = [["surprise", "Good surprise"], ["flop", "Big flop"], ["crazy", "Crazy prediction"]];
-const TEXT_MAX = 80, NOTE_MAX = 600;
+const TEXT_MAX = 80;
 const TOTAL_SLOTS = 5 + EXTRAS.length + 1 + TEXTS.length;
 
 /* ---------- flags (simple national flags, 2:1) ---------- */
@@ -117,10 +118,7 @@ function cleanRes(race, raw) {
     pole: drv(d.pole), firstOut: drv(d.firstOut, true), fastest: drv(d.fastest), dotd: drv(d.dotd),
     sc: SC_OPTS.includes(d.sc) ? d.sc : "",
     judge: { fayez: cleanCard(j.fayez), leona: cleanCard(j.leona) },
-    final: d.final === true,
-    note: typeof d.note === "string" ? d.note.slice(0, NOTE_MAX) : "",
-    updatedBy: PLAYERS.includes(d.updatedBy) ? d.updatedBy : "fayez",
-    updatedAt: num(d.updatedAt)
+    final: d.final === true
   };
 }
 
@@ -139,7 +137,7 @@ const pickKey = (r, p) => r + "_" + p;
 const blankPick = (r, p) => cleanPick(r, p, {});
 const blankRes = r => cleanRes(r, {});
 function getPick(r, p) { const k = pickKey(r, p); return drafts[k] || state.picks[k] || blankPick(r, p); }
-function getRes(r) { const k = "res_" + r; return drafts[k] || state.results[r] || blankRes(r); }
+function getRes(r) { return state.results[r] || blankRes(r); }
 
 /* The race the board opens on: the first one that isn't scored yet and isn't more than two days past.
    Before results have loaded, assume the next race to start. */
@@ -181,39 +179,31 @@ function setPath(o, path, val) {
 function editPick(path, val) {
   const r = raceId, k = pickKey(r, who), o = structuredClone(getPick(r, who));
   setPath(o, path, val); o.updatedAt = Date.now();
-  queue(k, picksCol.doc(k), o, "pick", r);
+  queue(k, picksCol.doc(k), o, r);
 }
-function editRes(path, val) {
-  const r = raceId, k = "res_" + r, o = structuredClone(getRes(r));
-  setPath(o, path, val);
-  for (const p of PLAYERS) for (const [f] of TEXTS) if (o.judge[p][f] === null) delete o.judge[p][f];
-  o.updatedBy = who; o.updatedAt = Date.now();
-  queue(k, resultsCol.doc(r), o, "res", r);
-}
-function queue(k, ref, o, kind, r) {
+function queue(k, ref, o, r) {
   drafts[k] = o; dirty.add(k);
   clearTimeout(timers[k]);
-  timers[k] = setTimeout(() => flush(k, ref, kind, r), 450);
+  timers[k] = setTimeout(() => flush(k, ref, r), 450);
 }
-async function flush(k, ref, kind, r) {
-  if (saving[k]) { again[k] = [ref, kind, r]; return; }
+async function flush(k, ref, r) {
+  if (saving[k]) { again[k] = [ref, r]; return; }
   if (!drafts[k]) return;
   saving[k] = true;
   const body = JSON.stringify(drafts[k]);
   let failed = false;
   try { await ref.set(JSON.parse(body)); }
-  catch (e) { failed = true; saveFailed(e, k, kind, r); }
+  catch (e) { failed = true; saveFailed(e, k, r); }
   saving[k] = false;
   if (!failed && again[k]) { const a = again[k]; again[k] = null; flush(k, ...a); return; }
   again[k] = null;
   if (!failed && drafts[k] && JSON.stringify(drafts[k]) === body) { dirty.delete(k); delete drafts[k]; }
 }
-function saveFailed(e, k, kind, r) {
+function saveFailed(e, k, r) {
   delete drafts[k]; dirty.delete(k);   // fall back to what the server has
   const code = e && e.code, name = raceById(r).name;
   if (code === "permission-denied") {
-    if (kind === "pick" && started(r)) showNotice(`Lights out has passed in ${name}, so those picks are locked.`, true);
-    else if (kind === "res" && !started(r)) showNotice(`${name} results open at lights out.`, true);
+    if (started(r)) showNotice(`Lights out has passed in ${name}, so those picks are locked.`, true);
     else showNotice("The save was refused. Check that the Firestore rules from SETUP-PRIVATE.txt are published, then reload.", true);
   } else if (code === "resource-exhausted") {
     showNotice("The free daily limit was hit. Saving will work again tomorrow.", true);
@@ -303,41 +293,6 @@ function tower(p) {
   return `<article class="tower ${p}"><div class="thead"><h3>${PNAME[p]}</h3><span class="chip">${esc(status)}</span></div>${body}</article>`;
 }
 
-function resultsPanel() {
-  const r = raceById(raceId), res = getRes(raceId), isOpen = started(raceId), ed = canWrite() && !res.final && isOpen;
-  const used = new Set(res.top5.filter(Boolean));
-  const head = res.final ? finalBanner(res)
-    : `<h3>${esc(r.name)} results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
-  const note = res.note ? `<p class="note">${esc(res.note)}</p>` : "";
-  const sel = (id, f, v, label, allowNone) => driverField(id, `data-r="${f}"`, v, f.startsWith("top5") ? used : null, allowNone, `Actual ${label}`, ed);
-  const top = res.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${sel("rs-t" + i, "top5." + i, d, "P" + (i + 1))}<span></span></div>`).join("");
-  const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${sel("rs-" + f, f, res[f], l, f === "firstOut")}<span></span></div>`).join("")
-    + `<div class="row x"><span class="xl">Safety cars</span><div class="scseg" role="group" aria-label="Actual safety cars">${SC_OPTS.map(o => `<button type="button" data-rsc="${o}" aria-pressed="${res.sc === o}"${ed ? "" : " disabled"}>${o}</button>`).join("")}</div><span></span></div>`;
-  /* Wildcard judging only appears once the race has started. */
-  const judge = !(isOpen || res.final) ? "" : PLAYERS.map(p => {
-    const pk = getPick(raceId, p);
-    return `<div class="jcard ${p}"><p class="label">${PNAME[p]}'s wildcards</p>${TEXTS.map(([f, l]) => {
-      const v = res.judge[p][f];
-      const shown = pk[f] ? (revealed(raceId) ? esc(pk[f]) : "Sealed") : "No pick";
-      const btns = pk[f] && revealed(raceId) ? `<div class="yn"><button type="button" class="y" data-j="${p}.${f}" data-v="1" aria-pressed="${v === true}"${ed ? "" : " disabled"}>Happened</button><button type="button" class="no" data-j="${p}.${f}" data-v="0" aria-pressed="${v === false}"${ed ? "" : " disabled"}>Didn't</button></div>` : "";
-      return `<div class="jrow"><p><small>${l}</small>${shown}</p>${btns}</div>`;
-    }).join("")}</div>`;
-  }).join("");
-  const ready = res.top5.every(Boolean);
-  let act = "";
-  if (canWrite() && isOpen) {
-    act = res.final
-      ? `<div class="actions"><button type="button" class="btn ghost" data-act="reopen">Reopen results</button><p class="hint">Reopen to fix a mistake or change a wildcard call. Scores update when you finalize again.</p></div>`
-      : `<div class="actions"><button type="button" class="btn" data-act="finalize"${ready ? "" : " disabled"}>Finalize &amp; score</button><p class="hint">${ready ? "Locks the results and adds this race to the season." : "Enter the real top 5 first."}</p></div>`;
-  }
-  return `${head}${note}<div class="rgrid"><div><p class="label">Actual top 5</p>${top}</div><div><p class="label">Everything else</p>${ex}</div></div>${judge ? `<div class="judge">${judge}</div>` : ""}${act}`;
-}
-function finalBanner(res) {
-  const s = raceScore(raceId), r = esc(raceById(raceId).name);
-  const line = s.f === s.l ? `Dead heat in ${r}, ${s.f}–${s.l}`
-    : s.f > s.l ? `<span class="f">Fayez</span> takes ${r}, ${s.f}–${s.l}` : `<span class="l">Leona</span> takes ${r}, ${s.l}–${s.f}`;
-  return `<p class="banner">${line}</p>`;
-}
 function seasonData() { return RACES.map(r => ({ r, s: raceScore(r.id) })); }
 function statusLine() {
   const map = {
@@ -354,7 +309,7 @@ function clockParts() {
   const s = raceScore(raceId);
   if (s) return [s.f === s.l ? "Final · dead heat" : `Final · ${s.f > s.l ? "Fayez" : "Leona"} wins`, `${s.f}–${s.l}`];
   const ms = startMs(raceId) - Date.now();
-  if (ms <= 0) return Date.now() - startMs(raceId) < 2.5 * 3600e3 ? ["Picks locked", "Race underway"] : ["Chequered flag", "Enter results"];
+  if (ms <= 0) return Date.now() - startMs(raceId) < 2.5 * 3600e3 ? ["Picks locked", "Race underway"] : ["Chequered flag", "Scores soon"];
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
   return ["Lights out in", `${d ? d + "d " : ""}${h}h ${String(m).padStart(2, "0")}m`];
 }
@@ -371,7 +326,7 @@ function renderTabs() {
     const date = new Date(r.start).toLocaleDateString(undefined, { month: "short", day: "numeric" });
     let tag = "", cls = "";
     if (s) { tag = s.f === s.l ? `Tie ${s.f}–${s.l}` : `${s.f > s.l ? "Fayez" : "Leona"} ${Math.max(s.f, s.l)}–${Math.min(s.f, s.l)}`; cls = s.f === s.l ? "" : (s.f > s.l ? "f" : "l"); }
-    else if (started(r.id)) { tag = "Results needed"; cls = "due"; }
+    else if (started(r.id)) { tag = "Awaiting results"; }
     else if (next && r.id === next.id) { tag = "Next race"; cls = "next"; }
     return `<button type="button" class="tab" data-race="${r.id}" aria-current="${r.id === raceId}">${FLAGS[r.flag]}<span class="tl"><b>${esc(r.short)}</b><i>R${r.round} · ${esc(date)}</i>${tag ? `<em class="${cls}">${esc(tag)}</em>` : ""}</span></button>`;
   }).join("");
@@ -419,7 +374,6 @@ function render() {
   renderHero();
   renderSeason();
   $("towers").innerHTML = PLAYERS.map(tower).join("");
-  $("results").innerHTML = resultsPanel();
   paintNotice();
   if (aid) {
     const el = $(aid);
@@ -438,7 +392,6 @@ document.addEventListener("change", e => {
   const t = e.target;
   if (!canWrite()) return;
   if (t.dataset.f && t.tagName === "SELECT") { disarm(); editPick(t.dataset.f, t.value); render(); }
-  else if (t.dataset.r && t.tagName === "SELECT") { editRes(t.dataset.r, t.value); render(); }
 });
 document.addEventListener("input", e => {
   const t = e.target;
@@ -452,18 +405,11 @@ document.addEventListener("click", e => {
   if (b.dataset.race) { raceId = b.dataset.race; userPickedRace = true; disarm(); noticeText = ""; render(); return; }
   if (!canWrite()) return;
   if (b.dataset.sc) { editPick("sc", getPick(raceId, who).sc === b.dataset.sc ? "" : b.dataset.sc); render(); return; }
-  if (b.dataset.rsc) { editRes("sc", getRes(raceId).sc === b.dataset.rsc ? "" : b.dataset.rsc); render(); return; }
-  if (b.dataset.j) {
-    const [p, f] = b.dataset.j.split("."), v = b.dataset.v === "1";
-    editRes("judge." + p + "." + f, getRes(raceId).judge[p][f] === v ? null : v); render(); return;
-  }
   const act = b.dataset.act;
   if (act === "lock") {
     if (!lockArmed) { lockArmed = true; clearTimeout(lockTimer); lockTimer = setTimeout(() => { lockArmed = false; render(); }, 4000); render(); return; }
     disarm(); editPick("locked", true); render();
   } else if (act === "unlock") { editPick("locked", false); render(); }
-  else if (act === "finalize") { editRes("final", true); render(); }
-  else if (act === "reopen") { editRes("final", false); render(); }
 });
 setInterval(() => {
   if (conn === "nocode" || !raceId) return;
@@ -498,7 +444,7 @@ function startGame() {
       if (RACE_IDS.has(race) && PLAYERS.includes(player)) next[d.id] = cleanPick(race, player, d.data());
     });
     state.picks = next;
-    for (const k of Object.keys(drafts)) if (!k.startsWith("res_") && !dirty.has(k)) delete drafts[k];
+    for (const k of Object.keys(drafts)) if (!dirty.has(k)) delete drafts[k];
     cacheFlags.picks = snap.metadata.fromCache;
     updateConn();
     render();
@@ -507,7 +453,6 @@ function startGame() {
     const next = {};
     snap.docs.forEach(d => { if (RACE_IDS.has(d.id)) next[d.id] = cleanRes(d.id, d.data()); });
     state.results = next;
-    for (const k of Object.keys(drafts)) if (k.startsWith("res_") && !dirty.has(k)) delete drafts[k];
     cacheFlags.results = snap.metadata.fromCache;
     updateConn();
     render();

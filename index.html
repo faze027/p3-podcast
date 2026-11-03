@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.google.com; connect-src 'self' https://firestore.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#120e2a">
-<title>P3 Podcast · Abu Dhabi GP</title>
+<meta name="theme-color" content="#0d1016">
+<title>P3 Podcast</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;800&family=Titillium+Web:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: broadcast timing-tower for one race. Abu Dhabi race header (twilight sky over Yas Marina, gridshell lattice like the
-   Yas Hotel canopy, UAE flag), scoreboard, two player towers side by side (stacked on phones), results, scoring. */
+/* Layout: broadcast timing-tower. Race tabs, then a header for the selected race (its flag, sky and texture: Mexico's
+   altitude sun, Interlagos rain, Vegas neon, Lusail floodlights, Yas Marina twilight under the hotel's gridshell),
+   season scoreboard, two player towers side by side (stacked on phones), results, season table and scoring. */
 :root{
   --asphalt:#0d1016; --panel:#151a23; --panel-2:#1c2230; --line:#283143;
   --text:#eef1f6; --muted:#8c96a8;
@@ -21,7 +22,6 @@
   --good:#3ddc8c; --bad:#ff5d62;
   --dusk-1:#120e2a; --dusk-2:#26163f; --dusk-3:#4d1f3c; --horizon:#e0782e; --sun:#ffb35c;
   --dusk-text:#ddd6ee; --dusk-muted:#a79dc4; --dusk-line:rgba(255,255,255,.12);
-  --uae-red:#ef3340; --uae-green:#00843d; --uae-white:#ffffff; --uae-black:#000000;
   --display:"Saira Extra Condensed","Arial Narrow",Impact,sans-serif;
   --body:"Titillium Web","Segoe UI",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
@@ -38,7 +38,7 @@ button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--flag);outline-offset:2px}
 
 /* Masthead */
-.mast{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:end}
+.mast{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 20px;align-items:end}
 .brand{display:flex;align-items:center;gap:14px}
 .logo{height:46px;width:auto;display:block;flex:none}
 .brand h1{margin:0;font-family:var(--display);font-weight:800;font-size:34px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
@@ -50,24 +50,46 @@ button,select,input{font:inherit;color:inherit}
 .seg button[aria-pressed="true"].f{background:var(--fayez);color:var(--asphalt)}
 .seg button[aria-pressed="true"].l{background:var(--leona);color:var(--asphalt)}
 
-/* Abu Dhabi race header */
-.hero{position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--dusk-line);color:var(--text);
+/* Race tabs */
+.tabs{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;min-width:0}
+.tab{flex:0 0 auto;display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 14px 8px 10px;cursor:pointer;text-align:left}
+.tab .flag{width:28px;height:14px}
+.tab .tl{display:flex;flex-direction:column;line-height:1.15}
+.tab b{font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.tab i{font-style:normal;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.tab em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tab em.next{color:var(--flag)} .tab em.due{color:var(--bad)} .tab em.f{color:var(--fayez)} .tab em.l{color:var(--leona)}
+.tab[aria-current="true"]{border-color:var(--flag);background:var(--panel-2)}
+.tab[aria-current="true"] b{color:var(--flag)}
+.flag{width:36px;height:18px;flex:none;display:block;border-radius:2px;box-shadow:0 0 0 1px var(--dusk-line)}
+
+/* Race header: each race sets its own sky (--sky-*), glow and accent */
+.hero{--sky-1:var(--dusk-1);--sky-2:var(--dusk-2);--sky-3:var(--dusk-3);--glow:var(--horizon);--accent:var(--sun);
+  position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--dusk-line);color:var(--text);
   background:
-    radial-gradient(140% 70% at 72% 118%, color-mix(in srgb,var(--horizon) 62%,transparent) 0%, color-mix(in srgb,var(--horizon) 18%,transparent) 38%, transparent 62%),
-    linear-gradient(180deg,var(--dusk-1) 0%,var(--dusk-2) 62%,var(--dusk-3) 100%)}
-.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:
-    repeating-linear-gradient(60deg,var(--dusk-line) 0 1px,transparent 1px 28px),
-    repeating-linear-gradient(-60deg,var(--dusk-line) 0 1px,transparent 1px 28px);
-  opacity:.5;
+    radial-gradient(140% 70% at 72% 118%, color-mix(in srgb,var(--glow) 62%,transparent) 0%, color-mix(in srgb,var(--glow) 18%,transparent) 38%, transparent 62%),
+    linear-gradient(180deg,var(--sky-1) 0%,var(--sky-2) 62%,var(--sky-3) 100%)}
+.hero[data-theme="mx"]{--sky-1:#0e1a16;--sky-2:#1b271f;--sky-3:#47162f;--glow:#e4007c;--accent:#ff86c0}
+.hero[data-theme="br"]{--sky-1:#08171a;--sky-2:#0c2a26;--sky-3:#14381f;--glow:#f2c400;--accent:#ffd84d}
+.hero[data-theme="us"]{--sky-1:#09071d;--sky-2:#1b0c38;--sky-3:#380d4a;--glow:#ff2bd1;--accent:#ff8ae6}
+.hero[data-theme="qa"]{--sky-1:#0b0c1a;--sky-2:#1b1228;--sky-3:#3d0f22;--glow:#b0244f;--accent:#f4a6bd}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   -webkit-mask-image:linear-gradient(100deg,transparent 38%,#000 78%);mask-image:linear-gradient(100deg,transparent 38%,#000 78%)}
+/* Yas Marina: the Yas Hotel's gridshell canopy */
+.hero[data-theme="ae"]::before{background:repeating-linear-gradient(60deg,var(--dusk-line) 0 1px,transparent 1px 28px),repeating-linear-gradient(-60deg,var(--dusk-line) 0 1px,transparent 1px 28px)}
+/* Interlagos: rain streaks */
+.hero[data-theme="br"]::before{background:repeating-linear-gradient(105deg,var(--dusk-line) 0 1px,transparent 1px 15px)}
+/* Las Vegas: neon sign lines */
+.hero[data-theme="us"]::before{background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--glow) 40%,transparent) 0 1px,transparent 1px 16px)}
+/* Lusail: floodlight beams */
+.hero[data-theme="qa"]::before{opacity:.9;background:conic-gradient(from 200deg at 88% -30%,transparent 0deg,var(--dusk-line) 6deg,transparent 12deg,transparent 20deg,var(--dusk-line) 26deg,transparent 32deg,transparent 40deg,var(--dusk-line) 46deg,transparent 52deg)}
+/* Mexico City: high-altitude afternoon sun */
+.hero[data-theme="mx"]::before{opacity:1;-webkit-mask-image:none;mask-image:none;background:radial-gradient(55% 80% at 92% -15%,var(--dusk-line),transparent 70%)}
 .hero-in{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px 40px;align-items:end;padding:26px 28px 24px}
-.kicker{margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--sun)}
-.uae{width:36px;height:18px;flex:none;display:block;border-radius:2px;box-shadow:0 0 0 1px var(--dusk-line)}
-.uae .g{fill:var(--uae-green)} .uae .w{fill:var(--uae-white)} .uae .k{fill:var(--uae-black)} .uae .r{fill:var(--uae-red)}
-.gp{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(50px,8.4vw,92px);line-height:.86;letter-spacing:.01em;text-transform:uppercase}
+.kicker{margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);min-height:18px}
+.gp{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(50px,8.4vw,92px);line-height:.86;letter-spacing:.01em;text-transform:uppercase;min-height:1.72em}
 .gp span{display:block}
-.gp span + span{color:var(--sun)}
+.gp span + span{color:var(--accent)}
 .venue{margin:14px 0 0;font-size:15px;color:var(--dusk-text)}
 .facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin:16px 0 0;padding:0;list-style:none}
 .facts li{display:flex;flex-direction:column;gap:2px}
@@ -117,7 +139,7 @@ select:disabled,input:disabled{opacity:.6}
   padding:6px 66px 6px 12px;border-left:5px solid var(--team);border-radius:0 6px 6px 0;overflow:hidden;
   background:linear-gradient(90deg,color-mix(in srgb,var(--team) 22%,var(--panel-2)) 0%,var(--panel-2) 72%)}
 .drv b{flex:none;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.06em;line-height:1}
-.drv .who{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.drv .ident{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1.2}
 .drv .nm{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drv .tm{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--team) 60%,var(--text))}
 .drv .face{position:absolute;right:14px;bottom:0;width:52px;height:52px;object-fit:cover;pointer-events:none}
@@ -169,9 +191,18 @@ select:disabled,input:disabled{opacity:.6}
 .yn button:disabled{cursor:default}
 .banner{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1;text-wrap:balance;margin:0}
 .banner .f{color:var(--fayez)} .banner .l{color:var(--leona)}
+.note{margin:0;font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px;max-width:90ch}
 
-/* Scoring rules */
-.rules{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 32px}
+/* Season + rules */
+.two{display:grid;grid-template-columns:3fr 2fr;gap:18px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+td .flag{display:inline-block;width:20px;height:10px;vertical-align:-1px;margin-right:8px}
+td.n{font-family:var(--mono);text-align:right} th.n{text-align:right}
+td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight:700}
+.rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .rules li{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:5px}
 .rules li b{font-family:var(--mono);color:var(--flag);white-space:nowrap}
 .notice{background:var(--panel-2);border-left:4px solid var(--flag);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px}
@@ -183,9 +214,9 @@ select:disabled,input:disabled{opacity:.6}
 .gate p{margin:0;color:var(--muted)}
 
 @media (max-width:760px){
-  .mast{grid-template-columns:1fr}
+  .mast{grid-template-columns:minmax(0,1fr)}
   .who{justify-content:flex-start}
-  .towers,.rgrid,.judge,.rules{grid-template-columns:1fr}
+  .towers,.rgrid,.judge,.two{grid-template-columns:1fr}
   .brand h1{font-size:30px}
   .logo{height:40px}
   .hero-in{grid-template-columns:1fr;padding:22px 18px 20px}
@@ -218,7 +249,7 @@ select:disabled,input:disabled{opacity:.6}
         <path d="M142 124 Q180 76 218 22" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
         <path d="M240 32 C262 10 308 16 304 46 C302 64 280 70 266 70 C290 70 314 80 310 104 C306 134 256 136 238 114" fill="none" stroke="#ffd23f" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <div><h1>Podcast</h1><small>Fayez vs Leona · Abu Dhabi GP predictions</small></div>
+      <div><h1>Podcast</h1><small>Fayez vs Leona · Mexico City to Abu Dhabi 2026</small></div>
     </div>
     <div class="who" id="whoBox">
       <span>This device is</span>
@@ -227,36 +258,23 @@ select:disabled,input:disabled{opacity:.6}
         <button type="button" class="l" data-who="leona" aria-pressed="false">Leona</button>
       </div>
     </div>
+    <nav class="tabs" id="tabs" aria-label="Races"></nav>
   </header>
 
   <section class="gate" id="gate" hidden>
     <h2>Private game</h2>
-    <p>This Abu Dhabi GP board only opens from the private link. Ask Fayez to send it to you, then open that exact link.</p>
+    <p>This board only opens from the private link. Ask Fayez to send it to you, then open that exact link.</p>
   </section>
 
   <div id="game">
     <div class="wrap">
-      <section class="hero" id="hero" aria-labelledby="gpTitle">
+      <section class="hero" id="hero" data-theme="ae" aria-labelledby="gpTitle">
         <div class="hero-in">
           <div>
-            <p class="kicker">
-              <svg class="uae" viewBox="0 0 24 12" aria-hidden="true">
-                <rect class="g" x="6" y="0" width="18" height="4"/>
-                <rect class="w" x="6" y="4" width="18" height="4"/>
-                <rect class="k" x="6" y="8" width="18" height="4"/>
-                <rect class="r" x="0" y="0" width="6" height="12"/>
-              </svg>
-              Round 22 of 22 · Season finale
-            </p>
-            <h2 class="gp" id="gpTitle"><span>Abu Dhabi</span> <span>Grand Prix</span></h2>
-            <p class="venue">Yas Marina Circuit · Abu Dhabi, United Arab Emirates</p>
-            <ul class="facts">
-              <li><small>Race day</small><b>Sun 6 Dec</b></li>
-              <li><small>Lights out, Abu Dhabi</small><b>17:00</b></li>
-              <li><small>Laps</small><b>58</b></li>
-              <li><small>Lap length</small><b>5.281 km</b></li>
-              <li><small>Distance</small><b>306.3 km</b></li>
-            </ul>
+            <p class="kicker" id="heroKicker"></p>
+            <h2 class="gp" id="gpTitle"></h2>
+            <p class="venue" id="venue"></p>
+            <ul class="facts" id="facts"></ul>
           </div>
           <div class="hero-side">
             <p class="label" id="clockLabel">Lights out in</p>
@@ -267,23 +285,26 @@ select:disabled,input:disabled{opacity:.6}
         </div>
       </section>
       <div class="notice" id="notice" role="status" hidden></div>
-      <section class="stand" id="standings" aria-label="Scoreboard"></section>
+      <section class="stand" id="standings" aria-label="Season standings"></section>
       <section class="towers" id="towers"></section>
       <section class="panel" id="results"></section>
-      <section class="panel">
-        <h3>Scoring</h3>
-        <ul class="rules">
-          <li>Top 5, exact position <b>5 each</b></li>
-          <li>Top 5, right driver, wrong spot <b>2 each</b></li>
-          <li>Pole position <b>4</b></li>
-          <li>First retirement <b>4</b></li>
-          <li>Fastest lap <b>3</b></li>
-          <li>Driver of the Day <b>3</b></li>
-          <li>Safety cars, exact count <b>3</b></li>
-          <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
-          <li>Crazy prediction, if it happened <b>6</b></li>
-        </ul>
-        <p class="hint">Picks stay sealed until you both lock in, or until lights out. They lock for good at lights out. Results open at lights out.</p>
+      <section class="two">
+        <div class="panel" id="season"></div>
+        <div class="panel">
+          <h3>Scoring</h3>
+          <ul class="rules">
+            <li>Top 5, exact position <b>5 each</b></li>
+            <li>Top 5, right driver, wrong spot <b>2 each</b></li>
+            <li>Pole position <b>4</b></li>
+            <li>First retirement <b>4</b></li>
+            <li>Fastest lap <b>3</b></li>
+            <li>Driver of the Day <b>3</b></li>
+            <li>Safety cars, exact count <b>3</b></li>
+            <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
+            <li>Crazy prediction, if it happened <b>6</b></li>
+          </ul>
+          <p class="hint">Picks stay sealed until you both lock in, or until lights out. They lock for good at lights out. Results open at lights out. Safety cars count full safety car periods, not virtual ones.</p>
+        </div>
       </section>
     </div>
   </div>
@@ -292,6 +313,6 @@ select:disabled,input:disabled{opacity:.6}
 <script src="firebase-app-compat.js"></script>
 <script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
 "use strict";
-/* P3 Podcast: F1 predictions for Fayez and Leona, 2026 Abu Dhabi Grand Prix.
+/* P3 Podcast: F1 predictions for Fayez and Leona, 2026 Mexico City GP to Abu Dhabi GP.
    Data lives in Firestore under games/<game code>/picks and games/<game code>/results.
    The game code only comes from the private link (the part after #). It is never stored in this repo. */
 
-/* ---------- race data (keep the lights-out time and driver list in sync with the Firestore rules) ---------- */
+/* ---------- season data (keep lights-out times and the driver list in sync with the Firestore rules) ---------- */
+const SEASON_ROUNDS = 23;
 const TEAMS = {
   MCL: { n: "McLaren", c: "#ff8000" }, MER: { n: "Mercedes", c: "#27f4d2" }, RBR: { n: "Red Bull", c: "#3671c6" },
   FER: { n: "Ferrari", c: "#e8002d" }, WIL: { n: "Williams", c: "#64c4ff" }, RB: { n: "Racing Bulls", c: "#6692ff" },
@@ -18,15 +19,28 @@ const DRIVERS = [
   ["ALB", "Alex Albon", "WIL"], ["SAI", "Carlos Sainz", "WIL"],
   ["LAW", "Liam Lawson", "RB"], ["LIN", "Arvid Lindblad", "RB"],
   ["ALO", "Fernando Alonso", "AMR"], ["STR", "Lance Stroll", "AMR"],
-  ["OCO", "Esteban Ocon", "HAA"], ["BEA", "Oliver Bearman", "HAA"],
+  ["OCO", "Esteban Ocon", "HAA"], ["BEA", "Oliver Bearman", "HAA"], ["HIR", "Ryo Hirakawa", "HAA"],
   ["GAS", "Pierre Gasly", "ALP"], ["COL", "Franco Colapinto", "ALP"],
   ["HUL", "Nico Hülkenberg", "AUD"], ["BOR", "Gabriel Bortoleto", "AUD"],
   ["BOT", "Valtteri Bottas", "CAD"], ["PER", "Sergio Pérez", "CAD"]
 ].map(([code, name, team]) => ({ code, name, team }));
 const DMAP = Object.fromEntries(DRIVERS.map(d => [d.code, d]));
 const RACES = [
-  // Round 22 of 22. Lights out 17:00 in Abu Dhabi = 13:00 UTC.
-  { id: "abudhabi-2026", name: "Abu Dhabi GP", short: "Abu Dhabi", round: 22, circuit: "Yas Marina Circuit", start: "2026-12-06T13:00:00Z" }
+  { id: "mexico-2026", name: "Mexico City", short: "Mexico", round: 19, flag: "mx",
+    circuit: "Autódromo Hermanos Rodríguez", place: "Mexico City, Mexico", city: "Mexico City",
+    day: "Sun 1 Nov", local: "14:00", laps: 71, length: "4.304 km", distance: "305.4 km", start: "2026-11-01T20:00:00Z" },
+  { id: "brazil-2026", name: "São Paulo", short: "Brazil", round: 20, flag: "br",
+    circuit: "Autódromo José Carlos Pace (Interlagos)", place: "São Paulo, Brazil", city: "São Paulo",
+    day: "Sun 8 Nov", local: "14:00", laps: 71, length: "4.309 km", distance: "305.9 km", start: "2026-11-08T17:00:00Z" },
+  { id: "vegas-2026", name: "Las Vegas", short: "Las Vegas", round: 21, flag: "us",
+    circuit: "Las Vegas Strip Circuit", place: "Las Vegas, United States", city: "Las Vegas",
+    day: "Sat 21 Nov", local: "20:00", laps: 50, length: "6.201 km", distance: "310.0 km", start: "2026-11-22T04:00:00Z" },
+  { id: "qatar-2026", name: "Qatar", short: "Qatar", round: 22, flag: "qa",
+    circuit: "Lusail International Circuit", place: "Lusail, Qatar", city: "Lusail",
+    day: "Sun 29 Nov", local: "19:00", laps: 57, length: "5.419 km", distance: "308.6 km", start: "2026-11-29T16:00:00Z" },
+  { id: "abudhabi-2026", name: "Abu Dhabi", short: "Abu Dhabi", round: 23, flag: "ae",
+    circuit: "Yas Marina Circuit", place: "Abu Dhabi, United Arab Emirates", city: "Abu Dhabi",
+    day: "Sun 6 Dec", local: "17:00", laps: 58, length: "5.281 km", distance: "306.3 km", start: "2026-12-06T13:00:00Z" }
 ];
 const PLAYERS = ["fayez", "leona"], PNAME = { fayez: "Fayez", leona: "Leona" };
 const OTHER = { fayez: "leona", leona: "fayez" };
@@ -34,8 +48,21 @@ const PTS = { exact: 5, inTop5: 2, pole: 4, firstOut: 4, fastest: 3, dotd: 3, sc
 const SC_OPTS = ["0", "1", "2", "3+"];
 const EXTRAS = [["pole", "Pole position"], ["firstOut", "First retirement"], ["fastest", "Fastest lap"], ["dotd", "Driver of the Day"]];
 const TEXTS = [["surprise", "Good surprise"], ["flop", "Big flop"], ["crazy", "Crazy prediction"]];
-const TEXT_MAX = 80;
+const TEXT_MAX = 80, NOTE_MAX = 600;
 const TOTAL_SLOTS = 5 + EXTRAS.length + 1 + TEXTS.length;
+
+/* ---------- flags (simple national flags, 2:1) ---------- */
+const flagSvg = inner => `<svg class="flag" viewBox="0 0 24 12" aria-hidden="true" focusable="false">${inner}</svg>`;
+const US_STRIPES = Array.from({ length: 7 }, (_, i) => `<rect y="${(i * 24 / 13).toFixed(3)}" width="24" height="${(12 / 13).toFixed(3)}" fill="#b22234"/>`).join("");
+const US_STARS = Array.from({ length: 20 }, (_, i) => `<circle cx="${(1 + (i % 5) * 1.9 + (Math.floor(i / 5) % 2) * 0.95).toFixed(2)}" cy="${(0.85 + Math.floor(i / 5) * 1.55).toFixed(2)}" r=".3" fill="#fff"/>`).join("");
+const QA_POINTS = (() => { let p = "0,0 6.2,0"; for (let i = 0; i < 9; i++) p += ` 8.2,${((i + 0.5) * 12 / 9).toFixed(3)} 6.2,${((i + 1) * 12 / 9).toFixed(3)}`; return p + " 0,12"; })();
+const FLAGS = {
+  mx: flagSvg(`<rect width="8" height="12" fill="#006847"/><rect x="8" width="8" height="12" fill="#fff"/><rect x="16" width="8" height="12" fill="#ce1126"/><circle cx="12" cy="6" r="1.9" fill="#8c5a2b"/><circle cx="12" cy="6.3" r="1" fill="#4e7a2a"/>`),
+  br: flagSvg(`<rect width="24" height="12" fill="#009c3b"/><polygon points="2,6 12,1.1 22,6 12,10.9" fill="#ffdf00"/><circle cx="12" cy="6" r="3.1" fill="#002776"/><path d="M9.1 5.3 Q12 4.4 14.95 6.4" stroke="#fff" stroke-width=".55" fill="none"/>`),
+  us: flagSvg(`<rect width="24" height="12" fill="#fff"/>${US_STRIPES}<rect width="9.6" height="6.46" fill="#3c3b6e"/>${US_STARS}`),
+  qa: flagSvg(`<rect width="24" height="12" fill="#8a1538"/><polygon points="${QA_POINTS}" fill="#fff"/>`),
+  ae: flagSvg(`<rect width="24" height="4" fill="#00843d"/><rect y="4" width="24" height="4" fill="#fff"/><rect y="8" width="24" height="4" fill="#000"/><rect width="6" height="12" fill="#ef3340"/>`)
+};
 
 /* ---------- small helpers ---------- */
 const $ = id => document.getElementById(id);
@@ -91,6 +118,7 @@ function cleanRes(race, raw) {
     sc: SC_OPTS.includes(d.sc) ? d.sc : "",
     judge: { fayez: cleanCard(j.fayez), leona: cleanCard(j.leona) },
     final: d.final === true,
+    note: typeof d.note === "string" ? d.note.slice(0, NOTE_MAX) : "",
     updatedBy: PLAYERS.includes(d.updatedBy) ? d.updatedBy : "fayez",
     updatedAt: num(d.updatedAt)
   };
@@ -102,7 +130,7 @@ let conn = "connecting";            // nocode | nofirebase | connecting | live |
 const cacheFlags = { picks: null, results: null };   // null until the first snapshot arrives
 let lockArmed = false, lockTimer = null, startedFlag = null;
 let who = PLAYERS.includes(load("p3-who")) ? load("p3-who") : null;
-const raceId = RACES[0].id;               // this game is one race only
+let raceId = null, userPickedRace = false, raceSettled = false;
 const state = { picks: {}, results: {} };  // cleaned server data
 const drafts = {}, dirty = new Set(), saving = {}, again = {}, timers = {};
 let noticeText = "", noticeErr = false;
@@ -112,6 +140,17 @@ const blankPick = (r, p) => cleanPick(r, p, {});
 const blankRes = r => cleanRes(r, {});
 function getPick(r, p) { const k = pickKey(r, p); return drafts[k] || state.picks[k] || blankPick(r, p); }
 function getRes(r) { const k = "res_" + r; return drafts[k] || state.results[r] || blankRes(r); }
+
+/* The race the board opens on: the first one that isn't scored yet and isn't more than two days past.
+   Before results have loaded, assume the next race to start. */
+function currentRaceId() {
+  const now = Date.now(), loaded = cacheFlags.results !== null;
+  const r = RACES.find(x => {
+    const st = Date.parse(x.start);
+    return loaded ? (!getRes(x.id).final && st + 2 * 864e5 > now) : st > now;
+  });
+  return (r || RACES[RACES.length - 1]).id;
+}
 
 /* ---------- scoring ---------- */
 function score(pick, res) {
@@ -127,6 +166,7 @@ function score(pick, res) {
   for (const [f] of TEXTS) { const v = pick[f] && res.judge[pick.player][f] === true ? PTS[f] : 0; out[f] = { v, k: v ? "hit" : "" }; out.total += v; }
   return out;
 }
+const raceScore = id => { const res = getRes(id); return res.final ? { f: score(getPick(id, "fayez"), res).total, l: score(getPick(id, "leona"), res).total } : null; };
 const pickCount = p => p.top5.filter(Boolean).length + [...EXTRAS.map(e => e[0]), "sc", ...TEXTS.map(t => t[0])].filter(f => String(p[f] || "").trim()).length;
 function revealed(r) { return (getPick(r, "fayez").locked && getPick(r, "leona").locked) || started(r) || getRes(r).final; }
 function canWrite() { return !!db && !!who && conn !== "error"; }
@@ -139,9 +179,9 @@ function setPath(o, path, val) {
   t[ps[ps.length - 1]] = val;
 }
 function editPick(path, val) {
-  const k = pickKey(raceId, who), o = structuredClone(getPick(raceId, who));
+  const r = raceId, k = pickKey(r, who), o = structuredClone(getPick(r, who));
   setPath(o, path, val); o.updatedAt = Date.now();
-  queue(k, picksCol.doc(k), o, "pick", raceId);
+  queue(k, picksCol.doc(k), o, "pick", r);
 }
 function editRes(path, val) {
   const r = raceId, k = "res_" + r, o = structuredClone(getRes(r));
@@ -170,10 +210,10 @@ async function flush(k, ref, kind, r) {
 }
 function saveFailed(e, k, kind, r) {
   delete drafts[k]; dirty.delete(k);   // fall back to what the server has
-  const code = e && e.code;
+  const code = e && e.code, name = raceById(r).name;
   if (code === "permission-denied") {
-    if (kind === "pick" && started(r)) showNotice("Lights out has passed, so picks for this race are locked.", true);
-    else if (kind === "res" && !started(r)) showNotice("Results open at lights out.", true);
+    if (kind === "pick" && started(r)) showNotice(`Lights out has passed in ${name}, so those picks are locked.`, true);
+    else if (kind === "res" && !started(r)) showNotice(`${name} results open at lights out.`, true);
     else showNotice("The save was refused. Check that the Firestore rules from SETUP-PRIVATE.txt are published, then reload.", true);
   } else if (code === "resource-exhausted") {
     showNotice("The free daily limit was hit. Saving will work again tomorrow.", true);
@@ -190,7 +230,7 @@ function paintNotice() {
   n.textContent = t; n.hidden = !t; n.classList.toggle("err", !!err && !!t);
 }
 
-/* ---------- rendering ---------- */
+/* ---------- driver cards ---------- */
 function driverOpts(val, used, allowNone) {
   let h = `<option value="">Pick a driver</option>`;
   if (allowNone) h += `<option value="NONE"${val === "NONE" ? " selected" : ""}>No retirements</option>`;
@@ -211,19 +251,18 @@ document.addEventListener("error", e => {
   const img = e.target;
   if (!img || img.tagName !== "IMG" || !img.classList.contains("face")) return;
   NO_PHOTO.add(img.dataset.code);
-  const card = img.closest(".drv");
-  if (card) card.classList.add("noface");
+  const c = img.closest(".drv");
+  if (c) c.classList.add("noface");
   img.remove();
 }, true);
-
 function card(code, editing) {
   const hide = editing ? ' aria-hidden="true"' : "";
-  if (code === "NONE") return `<div class="drv none"${hide}><span class="who"><span class="nm">No retirements</span><span class="tm">Everyone finishes</span></span></div>`;
+  if (code === "NONE") return `<div class="drv none"${hide}><span class="ident"><span class="nm">No retirements</span><span class="tm">Everyone finishes</span></span></div>`;
   const d = DMAP[code];
-  if (!d) return `<div class="drv blank"${hide}><span class="who"><span class="nm">${editing ? "Pick a driver" : "No pick"}</span></span></div>`;
+  if (!d) return `<div class="drv blank"${hide}><span class="ident"><span class="nm">${editing ? "Pick a driver" : "No pick"}</span></span></div>`;
   const t = TEAMS[d.team], c = d.code.toLowerCase();
   const face = NO_PHOTO.has(c) ? "" : `<img class="face" src="drivers/${c}.webp" data-code="${c}" alt="" loading="lazy" decoding="async">`;
-  return `<div class="drv${face ? "" : " noface"}" style="--team:${t.c}"${hide}><b>${d.code}</b><span class="who"><span class="nm">${esc(d.name)}</span><span class="tm">${esc(t.n)}</span></span>${face}</div>`;
+  return `<div class="drv${face ? "" : " noface"}" style="--team:${t.c}"${hide}><b>${d.code}</b><span class="ident"><span class="nm">${esc(d.name)}</span><span class="tm">${esc(t.n)}</span></span>${face}</div>`;
 }
 /* Editable: the card is what you see; the native dropdown sits invisibly on top of it. */
 function driverField(id, dataAttr, value, used, allowNone, label, editing) {
@@ -233,8 +272,9 @@ function driverField(id, dataAttr, value, used, allowNone, label, editing) {
 const ptCell = s => s ? `<span class="pt ${s.k}">${s.v ? "+" + s.v : "0"}</span>` : `<span></span>`;
 const PLACEHOLDER = { surprise: "Who over-delivers?", flop: "Who disappoints?", crazy: "Both Ferraris DNF…" };
 
+/* ---------- rendering ---------- */
 function tower(p) {
-  const pick = getPick(raceId, p), res = getRes(raceId), mine = p === who, show = mine || revealed(raceId), ed = editable(p, raceId);
+  const r = raceById(raceId), pick = getPick(raceId, p), res = getRes(raceId), mine = p === who, show = mine || revealed(raceId), ed = editable(p, raceId);
   const sc = res.final ? score(pick, res) : null;
   let status = sc ? `${sc.total} pts` : pick.locked ? "Locked in" : pickCount(pick) ? "Picking" : "No picks yet";
   if (mine && !sc) status += " · you";
@@ -258,21 +298,23 @@ function tower(p) {
       }
     }
     const tot = sc ? `<div class="total"><span class="label">Race total</span><b>${sc.total}</b></div>` : "";
-    body = `<div class="tbody"><p class="label">Abu Dhabi top 5</p><div class="grid5">${rows}</div><p class="label">The rest of the P3 game</p><div class="grid5">${ex}${scRow}${tx}</div>${act}${tot}</div>`;
+    body = `<div class="tbody"><p class="label">${esc(r.name)} top 5</p><div class="grid5">${rows}</div><p class="label">The rest of the P3 game</p><div class="grid5">${ex}${scRow}${tx}</div>${act}${tot}</div>`;
   }
   return `<article class="tower ${p}"><div class="thead"><h3>${PNAME[p]}</h3><span class="chip">${esc(status)}</span></div>${body}</article>`;
 }
 
 function resultsPanel() {
-  const res = getRes(raceId), isOpen = started(raceId), ed = canWrite() && !res.final && isOpen;
+  const r = raceById(raceId), res = getRes(raceId), isOpen = started(raceId), ed = canWrite() && !res.final && isOpen;
   const used = new Set(res.top5.filter(Boolean));
   const head = res.final ? finalBanner(res)
-    : `<h3>Abu Dhabi results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
+    : `<h3>${esc(r.name)} results</h3><p class="hint">${isOpen ? "Enter what actually happened, judge each other's wildcards, then finalize to score the race." : "Opens at lights out. Either of you can fill it in after the chequered flag."}</p>`;
+  const note = res.note ? `<p class="note">${esc(res.note)}</p>` : "";
   const sel = (id, f, v, label, allowNone) => driverField(id, `data-r="${f}"`, v, f.startsWith("top5") ? used : null, allowNone, `Actual ${label}`, ed);
   const top = res.top5.map((d, i) => `<div class="row"><div class="pos">P${i + 1}</div>${sel("rs-t" + i, "top5." + i, d, "P" + (i + 1))}<span></span></div>`).join("");
   const ex = EXTRAS.map(([f, l]) => `<div class="row x"><span class="xl">${l}</span>${sel("rs-" + f, f, res[f], l, f === "firstOut")}<span></span></div>`).join("")
     + `<div class="row x"><span class="xl">Safety cars</span><div class="scseg" role="group" aria-label="Actual safety cars">${SC_OPTS.map(o => `<button type="button" data-rsc="${o}" aria-pressed="${res.sc === o}"${ed ? "" : " disabled"}>${o}</button>`).join("")}</div><span></span></div>`;
-  const judge = PLAYERS.map(p => {
+  /* Wildcard judging only appears once the race has started. */
+  const judge = !(isOpen || res.final) ? "" : PLAYERS.map(p => {
     const pk = getPick(raceId, p);
     return `<div class="jcard ${p}"><p class="label">${PNAME[p]}'s wildcards</p>${TEXTS.map(([f, l]) => {
       const v = res.judge[p][f];
@@ -285,17 +327,18 @@ function resultsPanel() {
   let act = "";
   if (canWrite() && isOpen) {
     act = res.final
-      ? `<div class="actions"><button type="button" class="btn ghost" data-act="reopen">Reopen results</button><p class="hint">Reopen to fix a mistake. Scores update when you finalize again.</p></div>`
-      : `<div class="actions"><button type="button" class="btn" data-act="finalize"${ready ? "" : " disabled"}>Finalize &amp; score</button><p class="hint">${ready ? "Locks the results and scores the race." : "Enter the real top 5 first."}</p></div>`;
+      ? `<div class="actions"><button type="button" class="btn ghost" data-act="reopen">Reopen results</button><p class="hint">Reopen to fix a mistake or change a wildcard call. Scores update when you finalize again.</p></div>`
+      : `<div class="actions"><button type="button" class="btn" data-act="finalize"${ready ? "" : " disabled"}>Finalize &amp; score</button><p class="hint">${ready ? "Locks the results and adds this race to the season." : "Enter the real top 5 first."}</p></div>`;
   }
-  return `${head}<div class="rgrid"><div><p class="label">Actual top 5</p>${top}</div><div><p class="label">Everything else</p>${ex}</div></div><div class="judge">${judge}</div>${act}`;
+  return `${head}${note}<div class="rgrid"><div><p class="label">Actual top 5</p>${top}</div><div><p class="label">Everything else</p>${ex}</div></div>${judge ? `<div class="judge">${judge}</div>` : ""}${act}`;
 }
 function finalBanner(res) {
-  const f = score(getPick(raceId, "fayez"), res).total, l = score(getPick(raceId, "leona"), res).total, r = esc(raceById(raceId).short);
-  const line = f === l ? `Dead heat in ${r}, ${f}–${l}`
-    : f > l ? `<span class="f">Fayez</span> takes ${r}, ${f}–${l}` : `<span class="l">Leona</span> takes ${r}, ${l}–${f}`;
+  const s = raceScore(raceId), r = esc(raceById(raceId).name);
+  const line = s.f === s.l ? `Dead heat in ${r}, ${s.f}–${s.l}`
+    : s.f > s.l ? `<span class="f">Fayez</span> takes ${r}, ${s.f}–${s.l}` : `<span class="l">Leona</span> takes ${r}, ${s.l}–${s.f}`;
   return `<p class="banner">${line}</p>`;
 }
+function seasonData() { return RACES.map(r => ({ r, s: raceScore(r.id) })); }
 function statusLine() {
   const map = {
     connecting: ["", "Connecting…"],
@@ -308,8 +351,9 @@ function statusLine() {
   return `<span class="dot ${cls}"></span>${label}`;
 }
 function clockParts() {
+  const s = raceScore(raceId);
+  if (s) return [s.f === s.l ? "Final · dead heat" : `Final · ${s.f > s.l ? "Fayez" : "Leona"} wins`, `${s.f}–${s.l}`];
   const ms = startMs(raceId) - Date.now();
-  if (getRes(raceId).final) return ["Abu Dhabi", "Race scored"];
   if (ms <= 0) return Date.now() - startMs(raceId) < 2.5 * 3600e3 ? ["Picks locked", "Race underway"] : ["Chequered flag", "Enter results"];
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
   return ["Lights out in", `${d ? d + "d " : ""}${h}h ${String(m).padStart(2, "0")}m`];
@@ -320,22 +364,60 @@ function paintClock() {
   if (l) l.textContent = label;
   if (c) c.textContent = value;
 }
+function renderTabs() {
+  const next = RACES.find(r => !started(r.id));
+  $("tabs").innerHTML = RACES.map(r => {
+    const s = raceScore(r.id);
+    const date = new Date(r.start).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    let tag = "", cls = "";
+    if (s) { tag = s.f === s.l ? `Tie ${s.f}–${s.l}` : `${s.f > s.l ? "Fayez" : "Leona"} ${Math.max(s.f, s.l)}–${Math.min(s.f, s.l)}`; cls = s.f === s.l ? "" : (s.f > s.l ? "f" : "l"); }
+    else if (started(r.id)) { tag = "Results needed"; cls = "due"; }
+    else if (next && r.id === next.id) { tag = "Next race"; cls = "next"; }
+    return `<button type="button" class="tab" data-race="${r.id}" aria-current="${r.id === raceId}">${FLAGS[r.flag]}<span class="tl"><b>${esc(r.short)}</b><i>R${r.round} · ${esc(date)}</i>${tag ? `<em class="${cls}">${esc(tag)}</em>` : ""}</span></button>`;
+  }).join("");
+}
+function renderHero() {
+  const r = raceById(raceId);
+  $("hero").dataset.theme = r.flag;
+  $("heroKicker").innerHTML = `${FLAGS[r.flag]}<span>Round ${r.round} of ${SEASON_ROUNDS}${r.round === SEASON_ROUNDS ? " · Season finale" : ""}</span>`;
+  $("gpTitle").innerHTML = `<span>${esc(r.name)}</span> <span>Grand Prix</span>`;
+  $("venue").textContent = `${r.circuit} · ${r.place}`;
+  $("facts").innerHTML = [["Race day", r.day], [`Lights out, ${r.city}`, r.local], ["Laps", String(r.laps)], ["Lap length", r.length], ["Distance", r.distance]]
+    .map(([k, v]) => `<li><small>${esc(k)}</small><b>${esc(v)}</b></li>`).join("");
+  const when = new Date(r.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  $("heroWhen").textContent = `${when} your time`;
+  paintClock();
+  $("status").innerHTML = statusLine();
+  document.title = `P3 Podcast · ${r.name} GP`;
+}
+function renderSeason() {
+  const sd = seasonData(), done = sd.filter(x => x.s);
+  const tf = done.reduce((a, x) => a + x.s.f, 0), tl = done.reduce((a, x) => a + x.s.l, 0);
+  const wf = done.filter(x => x.s.f > x.s.l).length, wl = done.filter(x => x.s.l > x.s.f).length;
+  $("standings").innerHTML = `<div class="sbar f"><span class="nm">Fayez</span><span class="pts">${tf}<small>pts · ${wf} W</small></span></div><div class="vs">VS<small>${done.length} of ${RACES.length} scored</small></div><div class="sbar l"><span class="nm">Leona</span><span class="pts">${tl}<small>pts · ${wl} W</small></span></div>`;
+  const rows = sd.map(({ r, s }) => {
+    const label = `<td>${FLAGS[r.flag]}${esc(r.short)}</td>`;
+    if (s) return `<tr>${label}<td class="n">${s.f}</td><td class="n">${s.l}</td>${s.f === s.l ? `<td>Tie</td>` : s.f > s.l ? `<td class="w-f">Fayez</td>` : `<td class="w-l">Leona</td>`}</tr>`;
+    return `<tr>${label}<td class="n">–</td><td class="n">–</td><td>${started(r.id) ? "Awaiting results" : "Upcoming"}</td></tr>`;
+  }).join("");
+  const lead = done.length ? (tf === tl ? "Level" : tf > tl ? "Fayez leads" : "Leona leads") : "";
+  $("season").innerHTML = `<h3>Season</h3><div class="tablewrap"><table><thead><tr><th>Race</th><th class="n">Fayez</th><th class="n">Leona</th><th>Winner</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Total</th><th class="n">${tf}</th><th class="n">${tl}</th><th>${lead}</th></tr></tfoot></table></div>`;
+}
 function render() {
   if (conn === "nocode") return;
+  /* Open on the current race once results have loaded, then stay on whatever race is showing. */
+  if (!raceId || (!userPickedRace && !raceSettled)) {
+    raceId = currentRaceId();
+    if (cacheFlags.results !== null) raceSettled = true;
+  }
   const a = document.activeElement, aid = a && a.id;
   let s0 = null, s1 = null;
   try { s0 = a.selectionStart; s1 = a.selectionEnd; } catch (e) { /* not a text field */ }
   startedFlag = started(raceId);
   document.querySelectorAll("#whoSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.who === who)));
-  const r = raceById(raceId);
-  const when = new Date(r.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  $("heroWhen").textContent = `${when} your time`;
-  paintClock();
-  $("status").innerHTML = statusLine();
-  const res = getRes(raceId);
-  const tf = res.final ? score(getPick(raceId, "fayez"), res).total : 0;
-  const tl = res.final ? score(getPick(raceId, "leona"), res).total : 0;
-  $("standings").innerHTML = `<div class="sbar f"><span class="nm">Fayez</span><span class="pts">${tf}<small>pts</small></span></div><div class="vs">VS<small>${res.final ? "Final" : "Not scored yet"}</small></div><div class="sbar l"><span class="nm">Leona</span><span class="pts">${tl}<small>pts</small></span></div>`;
+  renderTabs();
+  renderHero();
+  renderSeason();
   $("towers").innerHTML = PLAYERS.map(tower).join("");
   $("results").innerHTML = resultsPanel();
   paintNotice();
@@ -367,6 +449,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b || b.disabled) return;
   if (b.dataset.who) { who = b.dataset.who; store("p3-who", who); disarm(); noticeText = ""; render(); return; }
+  if (b.dataset.race) { raceId = b.dataset.race; userPickedRace = true; disarm(); noticeText = ""; render(); return; }
   if (!canWrite()) return;
   if (b.dataset.sc) { editPick("sc", getPick(raceId, who).sc === b.dataset.sc ? "" : b.dataset.sc); render(); return; }
   if (b.dataset.rsc) { editRes("sc", getRes(raceId).sc === b.dataset.rsc ? "" : b.dataset.rsc); render(); return; }
@@ -383,7 +466,7 @@ document.addEventListener("click", e => {
   else if (act === "reopen") { editRes("final", false); render(); }
 });
 setInterval(() => {
-  if (conn === "nocode") return;
+  if (conn === "nocode" || !raceId) return;
   if (started(raceId) !== startedFlag) { render(); return; }
   paintClock();
 }, 30000);
@@ -393,7 +476,7 @@ function startGame() {
   gameCode = readGameCode();
   if (!gameCode) {
     conn = "nocode";
-    $("gate").hidden = false; $("game").hidden = true; $("whoBox").hidden = true;
+    $("gate").hidden = false; $("game").hidden = true; $("whoBox").hidden = true; $("tabs").hidden = true;
     return;
   }
   const cfg = window.FIREBASE_CONFIG;

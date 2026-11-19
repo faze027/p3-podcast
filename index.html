@@ -3,19 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.google.com; connect-src 'self' https://firestore.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0d1016">
-<link rel="icon" href="logo.svg" type="image/svg+xml">
 <title>P3 Podcast</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@600;800&family=Titillium+Web:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: broadcast timing-tower. Masthead with race tabs, then two player towers side by side (stacked on phones), results, season. */
+/* Layout: broadcast timing-tower. Race tabs, then a header for the selected race (its flag, sky and texture: Mexico's
+   altitude sun, Interlagos rain, Vegas neon, Lusail floodlights, Yas Marina twilight under the hotel's gridshell),
+   season scoreboard, two player towers side by side (stacked on phones), season table and scoring. */
 :root{
   --asphalt:#0d1016; --panel:#151a23; --panel-2:#1c2230; --line:#283143;
   --text:#eef1f6; --muted:#8c96a8;
   --fayez:#ff8a1f; --leona:#1fd1c1; --flag:#ffd23f;
   --good:#3ddc8c; --bad:#ff5d62;
+  --dusk-1:#120e2a; --dusk-2:#26163f; --dusk-3:#4d1f3c; --horizon:#e0782e; --sun:#ffb35c;
+  --dusk-text:#ddd6ee; --dusk-muted:#a79dc4; --dusk-line:rgba(255,255,255,.12);
   --display:"Saira Extra Condensed","Arial Narrow",Impact,sans-serif;
   --body:"Titillium Web","Segoe UI",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
@@ -25,16 +31,17 @@
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;background:var(--asphalt);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(20px,env(safe-area-inset-top,0px)) max(48px,env(safe-area-inset-bottom,0px))}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
 button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--flag);outline-offset:2px}
 
 /* Masthead */
-.mast{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:end}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{height:58px;width:auto;display:block}
-.brand h1{margin:0;font-family:var(--display);font-weight:800;font-size:44px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
+.mast{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 20px;align-items:end}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{height:46px;width:auto;display:block;flex:none}
+.brand h1{margin:0;font-family:var(--display);font-weight:800;font-size:34px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
 .brand small{display:block;font-family:var(--body);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .who{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .who span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -42,25 +49,60 @@ button,select,input{font:inherit;color:inherit}
 .seg button{border:0;background:none;padding:6px 14px;border-radius:999px;cursor:pointer;font-weight:700;color:var(--muted)}
 .seg button[aria-pressed="true"].f{background:var(--fayez);color:var(--asphalt)}
 .seg button[aria-pressed="true"].l{background:var(--leona);color:var(--asphalt)}
-.seg button[aria-pressed="true"].n{background:var(--flag);color:var(--asphalt)}
-.seg button:disabled{cursor:default;opacity:.5}
-.tabs{grid-column:1/-1;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-.tab{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:0}
-.tab b{font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
-.tab i{font-style:normal;font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+/* Race tabs */
+.tabs{grid-column:1/-1;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;min-width:0}
+.tab{flex:0 0 auto;display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 14px 8px 10px;cursor:pointer;text-align:left}
+.tab .flag{width:28px;height:14px}
+.tab .tl{display:flex;flex-direction:column;line-height:1.15}
+.tab b{font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.tab i{font-style:normal;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.tab em{font-style:normal;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tab em.next{color:var(--flag)} .tab em.f{color:var(--fayez)} .tab em.l{color:var(--leona)}
 .tab[aria-current="true"]{border-color:var(--flag);background:var(--panel-2)}
 .tab[aria-current="true"] b{color:var(--flag)}
-.tab .done{color:var(--good)}
+.flag{width:36px;height:18px;flex:none;display:block;border-radius:2px;box-shadow:0 0 0 1px var(--dusk-line)}
 
-/* Race strip */
-.race{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:baseline;justify-content:space-between;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-block:12px}
-.race h2{margin:0;font-family:var(--display);font-weight:800;font-size:34px;text-transform:uppercase;letter-spacing:.02em;line-height:1;text-wrap:balance}
-.race h2 em{font-style:normal;color:var(--muted);font-size:18px;margin-left:8px;font-family:var(--mono);font-weight:500}
-.race .meta{color:var(--muted);font-size:13px}
-.clock{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--flag);font-variant-numeric:tabular-nums}
-.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+/* Race header: each race sets its own sky (--sky-*), glow and accent */
+.hero{--sky-1:var(--dusk-1);--sky-2:var(--dusk-2);--sky-3:var(--dusk-3);--glow:var(--horizon);--accent:var(--sun);
+  position:relative;overflow:hidden;border-radius:10px;border:1px solid var(--dusk-line);color:var(--text);
+  background:
+    radial-gradient(140% 70% at 72% 118%, color-mix(in srgb,var(--glow) 62%,transparent) 0%, color-mix(in srgb,var(--glow) 18%,transparent) 38%, transparent 62%),
+    linear-gradient(180deg,var(--sky-1) 0%,var(--sky-2) 62%,var(--sky-3) 100%)}
+.hero[data-theme="mx"]{--sky-1:#0e1a16;--sky-2:#1b271f;--sky-3:#47162f;--glow:#e4007c;--accent:#ff86c0}
+.hero[data-theme="br"]{--sky-1:#08171a;--sky-2:#0c2a26;--sky-3:#14381f;--glow:#f2c400;--accent:#ffd84d}
+.hero[data-theme="us"]{--sky-1:#09071d;--sky-2:#1b0c38;--sky-3:#380d4a;--glow:#ff2bd1;--accent:#ff8ae6}
+.hero[data-theme="qa"]{--sky-1:#0b0c1a;--sky-2:#1b1228;--sky-3:#3d0f22;--glow:#b0244f;--accent:#f4a6bd}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  -webkit-mask-image:linear-gradient(100deg,transparent 38%,#000 78%);mask-image:linear-gradient(100deg,transparent 38%,#000 78%)}
+/* Yas Marina: the Yas Hotel's gridshell canopy */
+.hero[data-theme="ae"]::before{background:repeating-linear-gradient(60deg,var(--dusk-line) 0 1px,transparent 1px 28px),repeating-linear-gradient(-60deg,var(--dusk-line) 0 1px,transparent 1px 28px)}
+/* Interlagos: rain streaks */
+.hero[data-theme="br"]::before{background:repeating-linear-gradient(105deg,var(--dusk-line) 0 1px,transparent 1px 15px)}
+/* Las Vegas: neon sign lines */
+.hero[data-theme="us"]::before{background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--glow) 40%,transparent) 0 1px,transparent 1px 16px)}
+/* Lusail: floodlight beams */
+.hero[data-theme="qa"]::before{opacity:.9;background:conic-gradient(from 200deg at 88% -30%,transparent 0deg,var(--dusk-line) 6deg,transparent 12deg,transparent 20deg,var(--dusk-line) 26deg,transparent 32deg,transparent 40deg,var(--dusk-line) 46deg,transparent 52deg)}
+/* Mexico City: high-altitude afternoon sun */
+.hero[data-theme="mx"]::before{opacity:1;-webkit-mask-image:none;mask-image:none;background:radial-gradient(55% 80% at 92% -15%,var(--dusk-line),transparent 70%)}
+.hero-in{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px 40px;align-items:end;padding:26px 28px 24px}
+.kicker{margin:0 0 12px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);min-height:18px}
+.gp{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(50px,8.4vw,92px);line-height:.86;letter-spacing:.01em;text-transform:uppercase;min-height:1.72em}
+.gp span{display:block}
+.gp span + span{color:var(--accent)}
+.venue{margin:14px 0 0;font-size:15px;color:var(--dusk-text)}
+.facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin:16px 0 0;padding:0;list-style:none}
+.facts li{display:flex;flex-direction:column;gap:2px}
+.facts b{font-family:var(--mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.facts small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dusk-muted);font-weight:700}
+.hero-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+.hero-side .label{color:var(--dusk-muted)}
+.clock{font-family:var(--mono);font-weight:600;font-size:clamp(30px,4.4vw,46px);line-height:1;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.yourtime{margin:4px 0 6px;font-size:13px;color:var(--dusk-text)}
+.status{font-size:12px;color:var(--dusk-muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.live{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+.dot.warn{background:var(--flag)}
 .dot.err{background:var(--bad)}
 
 /* Standings */
@@ -77,7 +119,7 @@ button,select,input{font:inherit;color:inherit}
 /* Towers */
 .towers{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .tower{background:var(--panel);border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
-.thead{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;color:var(--asphalt)}
+.thead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;color:var(--asphalt)}
 .tower.fayez .thead{background:var(--fayez)} .tower.leona .thead{background:var(--leona)}
 .thead h3{margin:0;font-family:var(--display);font-weight:800;font-size:28px;text-transform:uppercase;letter-spacing:.05em;line-height:1}
 .chip{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:color-mix(in srgb,var(--asphalt) 82%,transparent);color:var(--text);padding:4px 10px;border-radius:999px;white-space:nowrap}
@@ -92,10 +134,26 @@ button,select,input{font:inherit;color:inherit}
 .pt.hit{color:var(--good)} .pt.half{color:var(--flag)}
 select,input[type=text]{width:100%;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:8px 10px;color:var(--text)}
 select:disabled,input:disabled{opacity:.6}
-optgroup{color:var(--muted)} option{color:var(--text)}
-.drv{display:flex;align-items:baseline;gap:8px;border-left:5px solid var(--team,var(--muted));background:var(--panel-2);padding:7px 10px;border-radius:0 5px 5px 0;min-width:0}
-.drv b{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.06em;line-height:1}
-.drv span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Driver card: team colour, code, name, team name, face */
+.drv{--team:var(--muted);position:relative;display:flex;align-items:center;gap:10px;min-width:0;min-height:52px;
+  padding:6px 66px 6px 12px;border-left:5px solid var(--team);border-radius:0 6px 6px 0;overflow:hidden;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--team) 22%,var(--panel-2)) 0%,var(--panel-2) 72%)}
+.drv b{flex:none;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.06em;line-height:1}
+.drv .ident{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1.2}
+.drv .nm{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drv .tm{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--team) 60%,var(--text))}
+.drv .face{position:absolute;right:14px;bottom:0;width:52px;height:52px;object-fit:cover;pointer-events:none}
+.drv.noface{padding-right:14px}
+.drv.blank{border-left-color:var(--line);background:var(--panel-2);padding-right:14px}
+.drv.blank .nm{color:var(--muted);font-style:italic}
+.drv.none{padding-right:14px}
+/* Tap a card to change it: the real dropdown sits invisibly on top, so phones still get their native picker */
+.pick{position:relative;min-width:0;border-radius:0 6px 6px 0}
+.pick select{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer;font-size:16px}
+.pick:focus-within{outline:2px solid var(--flag);outline-offset:2px}
+.pick:hover .drv{filter:brightness(1.12)}
+.pick::after{content:"";position:absolute;right:7px;top:50%;width:7px;height:7px;margin-top:-6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);pointer-events:none}
+.pick .drv.noface,.pick .drv.blank,.pick .drv.none{padding-right:26px}
 .empty{color:var(--muted);font-style:italic;font-size:14px;padding:7px 10px}
 .txt{background:var(--panel-2);padding:7px 10px;border-radius:5px;overflow-wrap:anywhere}
 .scseg{display:flex;gap:4px}
@@ -115,66 +173,67 @@ optgroup{color:var(--muted)} option{color:var(--text)}
 .total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding-top:10px}
 .total b{font-family:var(--mono);font-size:24px;font-variant-numeric:tabular-nums}
 
-/* Results */
-.panel{background:var(--panel);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px}
-.panel h3{margin:0;font-family:var(--display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.04em}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.rgrid>div{min-width:0;display:flex;flex-direction:column;gap:6px}
-.judge{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.jcard{background:var(--panel-2);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.jcard.fayez{border-top:3px solid var(--fayez)} .jcard.leona{border-top:3px solid var(--leona)}
-.jrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
-.jrow p{margin:0;font-size:14px;overflow-wrap:anywhere}
-.jrow p small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.yn{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
-.yn button{border:0;background:none;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}
-.yn button[aria-pressed="true"].y{background:var(--good);color:var(--asphalt)}
-.yn button[aria-pressed="true"].no{background:var(--bad);color:var(--asphalt)}
-.yn button:disabled{cursor:default}
-.banner{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;letter-spacing:.03em;line-height:1.1;text-wrap:balance;margin:0}
-.banner .f{color:var(--fayez)} .banner .l{color:var(--leona)}
-
 /* Season + rules */
+.panel{background:var(--panel);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h3{margin:0;font-family:var(--display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.04em}
 .two{display:grid;grid-template-columns:3fr 2fr;gap:18px}
+.tablewrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
 th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+td .flag{display:inline-block;width:20px;height:10px;vertical-align:-1px;margin-right:8px}
 td.n{font-family:var(--mono);text-align:right} th.n{text-align:right}
 td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight:700}
 .rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .rules li{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:5px}
-.rules li b{font-family:var(--mono);color:var(--flag)}
+.rules li b{font-family:var(--mono);color:var(--flag);white-space:nowrap}
 .notice{background:var(--panel-2);border-left:4px solid var(--flag);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px}
-.notice[hidden]{display:none!important}
+.notice.err{border-left-color:var(--bad)}
+
+/* Private-link gate */
+.gate{background:var(--panel);border-radius:8px;padding:28px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;max-width:560px}
+.gate h2{margin:0;font-family:var(--display);font-weight:800;font-size:32px;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+.gate p{margin:0;color:var(--muted)}
 
 @media (max-width:760px){
-  .mast{grid-template-columns:1fr}
+  .mast{grid-template-columns:minmax(0,1fr)}
   .who{justify-content:flex-start}
-  .towers,.rgrid,.judge,.two{grid-template-columns:1fr}
-  .brand h1{font-size:36px}.logo{height:48px}
+  .towers,.two{grid-template-columns:1fr}
+  .brand h1{font-size:30px}
+  .logo{height:40px}
+  .hero-in{grid-template-columns:1fr;padding:22px 18px 20px}
+  .hero-side{align-items:flex-start;text-align:left;border-top:1px solid var(--dusk-line);padding-top:16px}
+  .facts{gap:10px 20px}
   .stand{grid-template-columns:1fr 1fr}
   .vs{display:none}
-  .row.x{grid-template-columns:100px minmax(0,1fr) 40px}
+  .sbar,.sbar.l{flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px}
+  .sbar.l{align-items:flex-end}
+  .sbar .nm{font-size:22px}
+  .sbar .pts{font-size:22px;white-space:nowrap}
+  .row{grid-template-columns:40px minmax(0,1fr) 36px}
+  .row.x{grid-template-columns:minmax(0,1fr) 36px;grid-template-areas:"lab lab" "val pts";row-gap:4px;padding-top:2px}
+  .row.x > :nth-child(1){grid-area:lab}
+  .row.x > :nth-child(2){grid-area:val}
+  .row.x > :nth-child(3){grid-area:pts}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-
 <div class="wrap">
   <header class="mast">
     <div class="brand">
       <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 140" role="img" aria-label="P3 (P1 and P2 crossed out)">
-  <path fill="#eef1f6" fill-rule="evenodd" d="M12 22 H64 A30 30 0 0 1 64 82 H40 V120 H12 Z M40 40 H60 A12 12 0 0 1 60 64 H40 Z"/>
-  <path fill="#eef1f6" d="M92 22 H118 V120 H92 V48 H82 V32 Z"/>
-  <path d="M6 128 Q62 74 128 10" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
-  <path d="M152 52 C150 24 198 18 200 46 C202 72 162 92 150 118 C172 112 192 114 210 118" fill="none" stroke="#eef1f6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M142 124 Q180 76 218 22" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
-  <path d="M240 32 C262 10 308 16 304 46 C302 64 280 70 266 70 C290 70 314 80 310 104 C306 134 256 136 238 114" fill="none" stroke="#ffd23f" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-      <div><h1>Podcast</h1><small>Fayez vs Leona · prediction paddock</small></div>
+        <path fill="#eef1f6" fill-rule="evenodd" d="M12 22 H64 A30 30 0 0 1 64 82 H40 V120 H12 Z M40 40 H60 A12 12 0 0 1 60 64 H40 Z"/>
+        <path fill="#eef1f6" d="M92 22 H118 V120 H92 V48 H82 V32 Z"/>
+        <path d="M6 128 Q62 74 128 10" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
+        <path d="M152 52 C150 24 198 18 200 46 C202 72 162 92 150 118 C172 112 192 114 210 118" fill="none" stroke="#eef1f6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M142 124 Q180 76 218 22" fill="none" stroke="#ff3b30" stroke-width="10" stroke-linecap="round"/>
+        <path d="M240 32 C262 10 308 16 304 46 C302 64 280 70 266 70 C290 70 314 80 310 104 C306 134 256 136 238 114" fill="none" stroke="#ffd23f" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div><h1>Podcast</h1><small>Fayez vs Leona · Mexico City to Abu Dhabi 2026</small></div>
     </div>
-    <div class="who">
+    <div class="who" id="whoBox">
       <span>This device is</span>
       <div class="seg" id="whoSeg" role="group" aria-label="Who is playing on this device">
         <button type="button" class="f" data-who="fayez" aria-pressed="false">Fayez</button>
@@ -184,266 +243,58 @@ td.w-f{color:var(--fayez);font-weight:700} td.w-l{color:var(--leona);font-weight
     <nav class="tabs" id="tabs" aria-label="Races"></nav>
   </header>
 
-  <section class="race" id="raceStrip"></section>
-  <div class="notice" id="notice" hidden></div>
-  <section class="stand" id="standings" aria-label="Season standings"></section>
-  <section class="towers" id="towers"></section>
-  <section class="panel" id="results"></section>
-  <section class="two">
-    <div class="panel" id="season"></div>
-    <div class="panel">
-      <h3>Scoring</h3>
-      <ul class="rules">
-        <li>Top 5, exact position <b>5 each</b></li>
-        <li>Top 5, right driver, wrong spot <b>2 each</b></li>
-        <li>Pole position <b>4</b></li>
-        <li>First retirement <b>4</b></li>
-        <li>Fastest lap <b>3</b></li>
-        <li>Driver of the Day <b>3</b></li>
-        <li>Safety cars, exact count <b>3</b></li>
-        <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
-        <li>Crazy prediction, if it happened <b>6</b></li>
-      </ul>
-      <p class="hint">By participating in this game you full agree that the winner gets to keep Dr.Edmond Hajrizi for a full year, until a new winner of the p4 podcast is announced</p>
-    </div>
+  <section class="gate" id="gate" hidden>
+    <h2>Private game</h2>
+    <p>This board only opens from the private link. Ask Fayez to send it to you, then open that exact link.</p>
   </section>
+
+  <div id="game">
+    <div class="wrap">
+      <section class="hero" id="hero" data-theme="ae" aria-labelledby="gpTitle">
+        <div class="hero-in">
+          <div>
+            <p class="kicker" id="heroKicker"></p>
+            <h2 class="gp" id="gpTitle"></h2>
+            <p class="venue" id="venue"></p>
+            <ul class="facts" id="facts"></ul>
+          </div>
+          <div class="hero-side">
+            <p class="label" id="clockLabel">Lights out in</p>
+            <div class="clock" id="clock">–</div>
+            <p class="yourtime" id="heroWhen"></p>
+            <div class="status" id="status"><span class="dot"></span>Connecting…</div>
+          </div>
+        </div>
+      </section>
+      <div class="notice" id="notice" role="status" hidden></div>
+      <section class="stand" id="standings" aria-label="Season standings"></section>
+      <section class="towers" id="towers"></section>
+      <section class="two">
+        <div class="panel" id="season"></div>
+        <div class="panel">
+          <h3>Scoring</h3>
+          <ul class="rules">
+            <li>Top 5, exact position <b>5 each</b></li>
+            <li>Top 5, right driver, wrong spot <b>2 each</b></li>
+            <li>Pole position <b>4</b></li>
+            <li>First retirement <b>4</b></li>
+            <li>Fastest lap <b>3</b></li>
+            <li>Driver of the Day <b>3</b></li>
+            <li>Safety cars, exact count <b>3</b></li>
+            <li>Good surprise / Big flop, if it happened <b>3 each</b></li>
+            <li>Crazy prediction, if it happened <b>6</b></li>
+          </ul>
+          <p class="hint">Picks stay sealed until we both lock in, or until lights out, when they lock for good. I will grade them after and discuss any iffy points with you if/when needed.</p>
+          <p class="hint">By participating in this game you fully agree that the winner gets to keep Dr. Edmond Hajrizi for a full year, until a new winner of the P4 Podcast is announced.</p>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script>
-const TEAMS={
-  MCL:{n:"McLaren",c:"#ff8000"}, MER:{n:"Mercedes",c:"#27f4d2"}, RBR:{n:"Red Bull",c:"#3671c6"},
-  FER:{n:"Ferrari",c:"#e8002d"}, WIL:{n:"Williams",c:"#64c4ff"}, RB:{n:"Racing Bulls",c:"#6692ff"},
-  AMR:{n:"Aston Martin",c:"#229971"}, HAA:{n:"Haas",c:"#b6babd"}, ALP:{n:"Alpine",c:"#ff87bc"},
-  AUD:{n:"Audi",c:"#c4122f"}, CAD:{n:"Cadillac",c:"#d9d9d9"}
-};
-const DRIVERS=[
-  ["NOR","Lando Norris","MCL"],["PIA","Oscar Piastri","MCL"],
-  ["RUS","George Russell","MER"],["ANT","Kimi Antonelli","MER"],
-  ["VER","Max Verstappen","RBR"],["HAD","Isack Hadjar","RBR"],
-  ["LEC","Charles Leclerc","FER"],["HAM","Lewis Hamilton","FER"],
-  ["ALB","Alex Albon","WIL"],["SAI","Carlos Sainz","WIL"],
-  ["LAW","Liam Lawson","RB"],["LIN","Arvid Lindblad","RB"],
-  ["ALO","Fernando Alonso","AMR"],["STR","Lance Stroll","AMR"],
-  ["OCO","Esteban Ocon","HAA"],["BEA","Oliver Bearman","HAA"],
-  ["GAS","Pierre Gasly","ALP"],["COL","Franco Colapinto","ALP"],
-  ["HUL","Nico Hülkenberg","AUD"],["BOR","Gabriel Bortoleto","AUD"],
-  ["BOT","Valtteri Bottas","CAD"],["PER","Sergio Pérez","CAD"]
-].map(([code,name,team])=>({code,name,team}));
-const DMAP=Object.fromEntries(DRIVERS.map(d=>[d.code,d]));
-const RACES=[
-  {id:"mexico-2026",name:"Mexico City GP",short:"Mexico",round:20,circuit:"Autódromo Hermanos Rodríguez",start:"2026-11-01T20:00:00Z"},
-  {id:"brazil-2026",name:"São Paulo GP",short:"Brazil",round:21,circuit:"Interlagos",start:"2026-11-08T17:00:00Z"},
-  {id:"vegas-2026",name:"Las Vegas GP",short:"Las Vegas",round:22,circuit:"Las Vegas Strip Circuit",start:"2026-11-22T04:00:00Z"},
-  {id:"qatar-2026",name:"Qatar GP",short:"Qatar",round:23,circuit:"Lusail International Circuit",start:"2026-11-29T16:00:00Z"},
-  {id:"abudhabi-2026",name:"Abu Dhabi GP",short:"Abu Dhabi",round:24,circuit:"Yas Marina Circuit",start:"2026-12-06T13:00:00Z"}
-];
-const PLAYERS=["fayez","leona"], PNAME={fayez:"Fayez",leona:"Leona"};
-const PTS={exact:5,inTop5:2,pole:4,firstOut:4,fastest:3,dotd:3,sc:3,surprise:3,flop:3,crazy:6};
-const SC_OPTS=["0","1","2","3+"];
-const EXTRAS=[["pole","Pole position"],["firstOut","First retirement"],["fastest","Fastest lap"],["dotd","Driver of the Day"]];
-const TEXTS=[["surprise","Good surprise"],["flop","Big flop"],["crazy","Crazy prediction"]];
-
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const raceById=id=>RACES.find(r=>r.id===id);
-const startMs=id=>Date.parse(raceById(id).start);
-function store(k,v){try{v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){}}
-function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
-
-let db=null, conn="connecting", readOnly=false, lockArmed=false;
-let who=PLAYERS.includes(load("p3-who"))?load("p3-who"):null;
-let raceId=(RACES.find(r=>Date.parse(r.start)+4*3600e3>Date.now())||RACES[RACES.length-1]).id;
-const state={picks:{},results:{}}, drafts={}, dirty=new Set(), saving={}, again={}, timers={};
-
-const blankPick=(p,r)=>({player:p,race:r,top5:["","","","",""],pole:"",firstOut:"",fastest:"",dotd:"",sc:"",surprise:"",flop:"",crazy:"",locked:false});
-const blankRes=r=>({race:r,top5:["","","","",""],pole:"",firstOut:"",fastest:"",dotd:"",sc:"",judge:{fayez:{},leona:{}},final:false});
-const pid=(r,p)=>r+"_"+p;
-function getPick(r,p){const k=pid(r,p);return drafts[k]||{...blankPick(p,r),...(state.picks[k]||{})}}
-function getRes(r){const k="res_"+r;const b={...blankRes(r),...(state.results[r]||{})};b.judge={fayez:{},leona:{},...(b.judge||{})};return drafts[k]||b}
-
-function score(pick,res){
-  const out={top5:[],total:0};
-  res.top5.forEach((_,i)=>{const d=pick.top5[i];let v=0,k="";
-    if(d&&res.top5[i]===d){v=PTS.exact;k="hit"}else if(d&&res.top5.includes(d)){v=PTS.inTop5;k="half"}
-    out.top5.push({v,k});out.total+=v});
-  for(const [f] of EXTRAS){const v=pick[f]&&pick[f]===res[f]?PTS[f]:0;out[f]={v,k:v?"hit":""};out.total+=v}
-  {const v=pick.sc&&pick.sc===res.sc?PTS.sc:0;out.sc={v,k:v?"hit":""};out.total+=v}
-  for(const [f] of TEXTS){const v=pick[f]&&res.judge?.[pick.player]?.[f]===true?PTS[f]:0;out[f]={v,k:v?"hit":""};out.total+=v}
-  return out;
-}
-const pickCount=p=>p.top5.filter(Boolean).length+[...EXTRAS.map(e=>e[0]),"sc",...TEXTS.map(t=>t[0])].filter(f=>String(p[f]||"").trim()).length;
-const TOTAL_SLOTS=5+EXTRAS.length+1+TEXTS.length;
-function started(r){return Date.now()>=startMs(r)}
-function revealed(r){return (getPick(r,"fayez").locked&&getPick(r,"leona").locked)||started(r)||getRes(r).final}
-function canWrite(){return !!db&&!readOnly&&!!who}
-function editable(p,r){const k=getPick(r,p);return p===who&&canWrite()&&!k.locked&&!started(r)&&!getRes(r).final}
-
-/* ---------- saving ---------- */
-function setPath(o,path,val){const ps=path.split(".");let t=o;for(let i=0;i<ps.length-1;i++){const k=ps[i];t[k]=Array.isArray(t[k])?[...t[k]]:{...(t[k]||{})};t=t[k]}t[ps.at(-1)]=val}
-function editPick(path,val){const k=pid(raceId,who);const o=structuredClone(getPick(raceId,who));setPath(o,path,val);o.updatedAt=Date.now();queue(k,()=>db.collection("picks").doc(k),o)}
-function editRes(path,val){const k="res_"+raceId,r=raceId;const o=structuredClone(getRes(r));setPath(o,path,val);o.updatedBy=who;o.updatedAt=Date.now();queue(k,()=>db.collection("results").doc(r),o)}
-function queue(k,ref,o){drafts[k]=o;dirty.add(k);clearTimeout(timers[k]);timers[k]=setTimeout(()=>flush(k,ref),450)}
-async function flush(k,ref){
-  if(saving[k]){again[k]=ref;return}
-  saving[k]=true;const body=JSON.stringify(drafts[k]);
-  try{await ref().set(JSON.parse(body))}
-  catch(e){
-    if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,800+Math.random()*800));try{await ref().set(JSON.parse(body))}catch(e2){writeErr(e2)}}
-    else writeErr(e)}
-  saving[k]=false;
-  if(again[k]){const r=again[k];again[k]=null;flush(k,r);return}
-  if(JSON.stringify(drafts[k])===body)dirty.delete(k);
-}
-function writeErr(e){
-  if(e&&e.code==="permission-denied"){
-    showNotice("Firebase refused the save. Check the Firestore rules from the README.");
-  }else showNotice("Couldn't save just now ("+(e&&e.code||"error")+"). Your last change may not have reached the other device.");
-  render();
-}
-function showNotice(t){const n=document.getElementById("notice");n.textContent=t;n.hidden=!t}
-
-/* ---------- rendering ---------- */
-function driverOpts(val,used,none){
-  let h=`<option value="">Pick a driver</option>`;
-  if(none)h+=`<option value="NONE"${val==="NONE"?" selected":""}>No retirements</option>`;
-  for(const t of Object.keys(TEAMS)){
-    h+=`<optgroup label="${esc(TEAMS[t].n)}">`;
-    for(const d of DRIVERS.filter(x=>x.team===t)){
-      const dis=used&&used.has(d.code)&&d.code!==val;
-      h+=`<option value="${d.code}"${d.code===val?" selected":""}${dis?" disabled":""}>${esc(d.name)}</option>`}
-    h+=`</optgroup>`}
-  return h;
-}
-function chip(code){
-  if(!code)return `<div class="empty">No pick</div>`;
-  if(code==="NONE")return `<div class="txt">No retirements</div>`;
-  const d=DMAP[code];if(!d)return `<div class="txt">${esc(code)}</div>`;
-  return `<div class="drv" style="--team:${TEAMS[d.team].c}"><b>${d.code}</b><span>${esc(d.name)}</span></div>`;
-}
-const ptCell=s=>s?`<span class="pt ${s.k}">${s.v?"+"+s.v:"0"}</span>`:`<span></span>`;
-
-function tower(p){
-  const pick=getPick(raceId,p),res=getRes(raceId),mine=p===who,show=mine||revealed(raceId),ed=editable(p,raceId);
-  const sc=res.final?score(pick,res):null;
-  let status=sc?`${sc.total} pts`:pick.locked?"Locked in":pickCount(pick)?"Picking":"No picks yet";
-  if(mine&&!sc)status+=" · you";
-  let body;
-  if(!show){
-    body=`<div class="sealed"><b>Sealed</b><p>${pickCount(pick)} of ${TOTAL_SLOTS} picks made${pick.locked?", locked in":""}. Revealed when you both lock in, or at lights out.</p></div>`;
-  }else{
-    const used=new Set(pick.top5.filter(Boolean));
-    const rows=pick.top5.map((d,i)=>`<div class="row"><div class="pos">P${i+1}</div>${ed?`<select id="pk-${p}-t${i}" data-f="top5.${i}" aria-label="P${i+1}">${driverOpts(d,used)}</select>`:chip(d)}${ptCell(sc&&sc.top5[i])}</div>`).join("");
-    const ex=EXTRAS.map(([f,l])=>`<div class="row x"><span class="xl">${l}</span>${ed?`<select id="pk-${p}-${f}" data-f="${f}" aria-label="${l}">${driverOpts(pick[f],null,f==="firstOut")}</select>`:chip(pick[f])}${ptCell(sc&&sc[f])}</div>`).join("");
-    const scRow=`<div class="row x"><span class="xl">Safety cars</span><div class="scseg" role="group" aria-label="Safety cars">${SC_OPTS.map(o=>`<button type="button" data-sc="${o}" aria-pressed="${pick.sc===o}"${ed?"":" disabled"}>${o}</button>`).join("")}</div>${ptCell(sc&&sc.sc)}</div>`;
-    const tx=TEXTS.map(([f,l])=>`<div class="row x"><span class="xl">${l}</span>${ed?`<input type="text" id="pk-${p}-${f}" data-f="${f}" maxlength="80" placeholder="${f==="crazy"?"Both Ferraris DNF…":f==="flop"?"Who disappoints?":"Who over-delivers?"}" value="${esc(pick[f])}">`:pick[f]?`<div class="txt">${esc(pick[f])}</div>`:`<div class="empty">No pick</div>`}${ptCell(sc&&sc[f])}</div>`).join("");
-    let act="";
-    if(mine&&!res.final&&!started(raceId)&&canWrite()){
-      const other=getPick(raceId,p==="fayez"?"leona":"fayez");
-      if(!pick.locked){
-        const full=pick.top5.every(Boolean);
-        act=`<div class="actions"><button type="button" class="btn${lockArmed?" warn":""}" data-act="lock"${full?"":" disabled"}>${lockArmed?"Tap again to lock":"Lock in picks"}</button>${full?`<p class="hint">You can unlock until ${PNAME[p==="fayez"?"leona":"fayez"]} locks in too.</p>`:`<p class="hint">Fill your top 5 to lock in.</p>`}</div>`;
-      }else if(!other.locked){
-        act=`<div class="actions"><button type="button" class="btn ghost" data-act="unlock">Unlock to change</button><p class="hint">Waiting for ${PNAME[p==="fayez"?"leona":"fayez"]} to lock in.</p></div>`;
-      }
-    }
-    const tot=sc?`<div class="total"><span class="label">Race total</span><b>${sc.total}</b></div>`:"";
-    body=`<div class="tbody"><p class="label">Top 5 finish</p><div class="grid5">${rows}</div><p class="label">The rest of the P3 game</p><div class="grid5">${ex}${scRow}${tx}</div>${act}${tot}</div>`;
-  }
-  return `<article class="tower ${p}"><div class="thead"><h3>${PNAME[p]}</h3><span class="chip">${esc(status)}</span></div>${body}</article>`;
-}
-
-function resultsPanel(){
-  const res=getRes(raceId),ed=canWrite()&&!res.final,used=new Set(res.top5.filter(Boolean));
-  const head=res.final?finalBanner(res):`<h3>Race results</h3><p class="hint">${started(raceId)?"Enter what actually happened, judge each other's wildcards, then finalize to score the race.":"Fill this in after the chequered flag. Either of you can enter it."}</p>`;
-  const sel=(id,f,v,none)=>ed?`<select id="${id}" data-r="${f}">${driverOpts(v,f.startsWith("top5")?used:null,none)}</select>`:chip(v);
-  const top=res.top5.map((d,i)=>`<div class="row"><div class="pos">P${i+1}</div>${sel("rs-t"+i,"top5."+i,d)}<span></span></div>`).join("");
-  const ex=EXTRAS.map(([f,l])=>`<div class="row x"><span class="xl">${l}</span>${sel("rs-"+f,f,res[f],f==="firstOut")}<span></span></div>`).join("")+
-    `<div class="row x"><span class="xl">Safety cars</span><div class="scseg">${SC_OPTS.map(o=>`<button type="button" data-rsc="${o}" aria-pressed="${res.sc===o}"${ed?"":" disabled"}>${o}</button>`).join("")}</div><span></span></div>`;
-  const judge=PLAYERS.map(p=>{const pk=getPick(raceId,p);
-    return `<div class="jcard ${p}"><p class="label">${PNAME[p]}'s wildcards</p>${TEXTS.map(([f,l])=>{const v=res.judge?.[p]?.[f];
-      return `<div class="jrow"><p><small>${l}</small>${pk[f]&&revealed(raceId)?esc(pk[f]):pk[f]?"Sealed":"No pick"}</p>${pk[f]?`<div class="yn"><button type="button" class="y" data-j="${p}.${f}" data-v="1" aria-pressed="${v===true}"${ed?"":" disabled"}>Happened</button><button type="button" class="no" data-j="${p}.${f}" data-v="0" aria-pressed="${v===false}"${ed?"":" disabled"}>Didn't</button></div>`:""}</div>`}).join("")}</div>`}).join("");
-  const ready=res.top5.every(Boolean);
-  const act=canWrite()?(res.final?`<div class="actions"><button type="button" class="btn ghost" data-act="reopen">Reopen results</button><p class="hint">Reopen to fix a mistake. Scores update when you finalize again.</p></div>`
-    :`<div class="actions"><button type="button" class="btn" data-act="finalize"${ready&&started(raceId)?"":" disabled"}>Finalize &amp; score</button><p class="hint">${started(raceId)?(ready?"Locks results and adds this race to the season.":"Enter the real top 5 first."):"Opens once the race has started."}</p></div>`):"";
-  return `${head}<div class="rgrid"><div><p class="label">Actual top 5</p>${top}</div><div><p class="label">Everything else</p>${ex}</div></div><div class="judge">${judge}</div>${act}`;
-}
-function finalBanner(res){
-  const f=score(getPick(raceId,"fayez"),res).total,l=score(getPick(raceId,"leona"),res).total,r=raceById(raceId).short;
-  const line=f===l?`Dead heat in ${esc(r)}, ${f}–${l}`:f>l?`<span class="f">Fayez</span> takes ${esc(r)}, ${f}–${l}`:`<span class="l">Leona</span> takes ${esc(r)}, ${l}–${f}`;
-  return `<p class="banner">${line}</p>`;
-}
-function seasonData(){
-  return RACES.map(r=>{const res=getRes(r.id);if(!res.final)return {r,done:false};
-    const f=score(getPick(r.id,"fayez"),res).total,l=score(getPick(r.id,"leona"),res).total;return {r,done:true,f,l}})
-}
-function render(){
-  const a=document.activeElement,aid=a&&a.id,s0=a&&a.selectionStart,s1=a&&a.selectionEnd;
-  const sd=seasonData();
-  document.querySelectorAll("#whoSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.who===who)));
-  document.getElementById("tabs").innerHTML=RACES.map(r=>{const d=sd.find(x=>x.r===r);
-    return `<button type="button" class="tab" data-race="${r.id}" aria-current="${r.id===raceId}"><b>${esc(r.short)}</b><i>R${r.round} · ${new Date(r.start).toLocaleDateString(undefined,{month:"short",day:"numeric"})}${d.done?` · <span class="done">scored</span>`:""}</i></button>`}).join("");
-  const r=raceById(raceId);
-  document.getElementById("raceStrip").innerHTML=`<div><h2>${esc(r.name)}<em>R${r.round}</em></h2><div class="meta">${esc(r.circuit)} · lights out ${new Date(r.start).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div></div><div><div class="clock" id="clock">${clockText()}</div><div class="status"><span class="dot ${conn==="live"?"live":conn==="off"?"err":""}"></span>${conn==="live"?"Live board, synced between your devices":conn==="off"?"Not connected to Firebase yet.":"Connecting…"}</div></div>`;
-  const tf=sd.reduce((s,x)=>s+(x.done?x.f:0),0),tl=sd.reduce((s,x)=>s+(x.done?x.l:0),0);
-  const wf=sd.filter(x=>x.done&&x.f>x.l).length,wl=sd.filter(x=>x.done&&x.l>x.f).length,n=sd.filter(x=>x.done).length;
-  document.getElementById("standings").innerHTML=`<div class="sbar f"><span class="nm">Fayez</span><span class="pts">${tf}<small>pts · ${wf} W</small></span></div><div class="vs">VS<small>${n} of ${RACES.length} scored</small></div><div class="sbar l"><span class="nm">Leona</span><span class="pts">${tl}<small>pts · ${wl} W</small></span></div>`;
-  document.getElementById("towers").innerHTML=PLAYERS.map(tower).join("");
-  document.getElementById("results").innerHTML=resultsPanel();
-  document.getElementById("season").innerHTML=`<h3>Season</h3><div style="overflow-x:auto"><table><thead><tr><th>Race</th><th class="n">Fayez</th><th class="n">Leona</th><th>Winner</th></tr></thead><tbody>${sd.map(x=>`<tr><td>${esc(x.r.short)}</td><td class="n">${x.done?x.f:"–"}</td><td class="n">${x.done?x.l:"–"}</td>${x.done?(x.f===x.l?`<td>Tie</td>`:x.f>x.l?`<td class="w-f">Fayez</td>`:`<td class="w-l">Leona</td>`):`<td>${Date.now()>=Date.parse(x.r.start)?"Awaiting results":"Upcoming"}</td>`}</tr>`).join("")}</tbody><tfoot><tr><th>Total</th><th class="n">${tf}</th><th class="n">${tl}</th><th>${n?(tf===tl?"Level":tf>tl?"Fayez leads":"Leona leads"):""}</th></tr></tfoot></table></div>`;
-  if(!who)showNotice(document.getElementById("notice").hidden?"Pick who's on this device (top right) to start predicting.":document.getElementById("notice").textContent);
-  if(aid){const el=document.getElementById(aid);if(el){el.focus();try{if(el.setSelectionRange&&s0!=null)el.setSelectionRange(s0,s1)}catch(e){}}}
-}
-function clockText(){
-  const ms=startMs(raceId)-Date.now();
-  if(getRes(raceId).final)return "Race scored";
-  if(ms<=0)return Date.now()-startMs(raceId)<2.5*3600e3?"Race underway · picks locked":"Chequered flag · enter results";
-  const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4);
-  return `Lights out in ${d?d+"d ":""}${h}h ${String(m).padStart(2,"0")}m`;
-}
-
-/* ---------- events ---------- */
-document.addEventListener("change",e=>{
-  const t=e.target;
-  if(t.dataset.f&&t.tagName==="SELECT"&&canWrite()){lockArmed=false;editPick(t.dataset.f,t.value);render()}
-  else if(t.dataset.r&&canWrite()){editRes(t.dataset.r,t.value);render()}
-});
-document.addEventListener("input",e=>{const t=e.target;if(t.dataset.f&&t.tagName==="INPUT"&&canWrite())editPick(t.dataset.f,t.value)});
-document.addEventListener("click",e=>{
-  const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.who){who=b.dataset.who;store("p3-who",who);lockArmed=false;showNotice(readOnly?document.getElementById("notice").textContent:"");render();return}
-  if(b.dataset.race){raceId=b.dataset.race;lockArmed=false;render();return}
-  if(!canWrite()||b.disabled)return;
-  if(b.dataset.sc){editPick("sc",getPick(raceId,who).sc===b.dataset.sc?"":b.dataset.sc);render();return}
-  if(b.dataset.rsc){editRes("sc",getRes(raceId).sc===b.dataset.rsc?"":b.dataset.rsc);render();return}
-  if(b.dataset.j){const [p,f]=b.dataset.j.split(".");const v=b.dataset.v==="1";editRes("judge."+p+"."+f,getRes(raceId).judge?.[p]?.[f]===v?null:v);render();return}
-  const act=b.dataset.act;
-  if(act==="lock"){if(!lockArmed){lockArmed=true;render();return}lockArmed=false;editPick("locked",true);render()}
-  else if(act==="unlock"){editPick("locked",false);render()}
-  else if(act==="finalize"){editRes("final",true);render()}
-  else if(act==="reopen"){editRes("final",false);render()}
-});
-setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=clockText();
-  if(!render.lastStarted!==!started(raceId)){render.lastStarted=started(raceId);render()}},30000);
-
-/* ---------- live data ---------- */
-render();
-(async()=>{
-  try{
-    const cfg=window.FIREBASE_CONFIG;
-    if(window.firebase&&cfg&&cfg.projectId&&!/PASTE/.test(cfg.projectId)){firebase.initializeApp(cfg);db=firebase.firestore()}
-  }catch(e){db=null}
-  if(!db){conn="off";showNotice("Firebase isn't set up yet. Paste your project's config into firebase-config.js (steps in the README).");render();return}
-  conn="live";render();
-  db.collection("picks").onSnapshot(s=>{
-    state.picks={};s.docs.forEach(d=>{state.picks[d.id]=d.data();if(!dirty.has(d.id))delete drafts[d.id]});render();
-  },e=>{conn="off";showNotice("Lost the live connection. Reload the page to reconnect.");render()});
-  db.collection("results").onSnapshot(s=>{
-    state.results={};s.docs.forEach(d=>{state.results[d.id]=d.data();if(!dirty.has("res_"+d.id))delete drafts["res_"+d.id]});render();
-  },e=>{conn="off";showNotice("Lost the live connection. Reload the page to reconnect.");render()});
-})();
-</script>
-
+<script src="app.js?v=6"></script>
 </body>
 </html>
